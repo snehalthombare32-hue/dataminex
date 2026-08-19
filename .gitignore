@@ -1,0 +1,16 @@
+# Dependency directories
+node_modules/
+
+# Environment files (sensitive credentials)
+.env
+.env.test
+
+# VS Code settings
+.vscode/
+
+# System generated folders
+.gemini/
+.system_generated/
+temp_zip/
+public/css/styles_original.css
+*.log

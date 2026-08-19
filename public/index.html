@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DataMineX — Interactive Learning Platform</title>
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Learn Data Warehousing, Data Mining, and Data Analytics through hands-on lessons, guided live demos, practicals, and real-world challenges.">
+  
+  <!-- Premium Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="/css/styles.css">
+  
+  <!-- External Dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <!-- App Wrapper -->
+  <div id="root" class="auth-layout">
+    
+    <!-- Sidebar (Hidden on Auth/Login screens, visible on Dashboard/Learning screens) -->
+    <aside id="sidebar" class="sidebar hidden">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">📊</span>
+          <span class="logo-text">DataMineX</span>
+        </div>
+        <button id="sidebar-close" class="mobile-only-btn" aria-label="Close menu">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <a href="#/dashboard" class="nav-item active" id="nav-dashboard">
+          <i data-lucide="home"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#/learning-path" class="nav-item" id="nav-learning-path">
+          <i data-lucide="map"></i>
+          <span>Learning Path</span>
+        </a>
+        
+        <div class="nav-group">
+          <span class="nav-group-title">🏢 Data Warehouse</span>
+          <a href="#/module/warehouse" class="nav-item-sub" id="nav-warehouse">
+            <i data-lucide="book-open"></i>
+            <span>Module Home</span>
+          </a>
+          <a href="#/module/warehouse/demo" class="nav-item-sub" id="nav-warehouse-demo">
+            <i data-lucide="play-circle"></i>
+            <span>Live Demo (ETL)</span>
+          </a>
+        </div>
+        
+        <div class="nav-group">
+          <span class="nav-group-title">⛏ Data Mining</span>
+          <a href="#/module/mining" class="nav-item-sub" id="nav-mining">
+            <i data-lucide="book-open"></i>
+            <span>Module Home</span>
+          </a>
+          <a href="#/module/mining/demo" class="nav-item-sub" id="nav-mining-demo">
+            <i data-lucide="play-circle"></i>
+            <span>Live Demo (K-Means)</span>
+          </a>
+        </div>
+        
+        <div class="nav-group">
+          <span class="nav-group-title">📊 Data Analytics</span>
+          <a href="#/module/analytics" class="nav-item-sub" id="nav-analytics">
+            <i data-lucide="book-open"></i>
+            <span>Module Home</span>
+          </a>
+          <a href="#/module/analytics/demo" class="nav-item-sub" id="nav-analytics-demo">
+            <i data-lucide="play-circle"></i>
+            <span>Live Demo (OLAP Cube)</span>
+          </a>
+        </div>
+
+        <div class="nav-separator"></div>
+
+        <a href="#/challenges" class="nav-item" id="nav-challenges">
+          <i data-lucide="target"></i>
+          <span>Challenges</span>
+        </a>
+        <a href="#/achievements" class="nav-item" id="nav-achievements">
+          <i data-lucide="award"></i>
+          <span>Achievements</span>
+        </a>
+        <a href="#/progress" class="nav-item" id="nav-progress">
+          <i data-lucide="trending-up"></i>
+          <span>My Progress</span>
+        </a>
+        <a href="#/sql-sandbox" class="nav-item" id="nav-sql-sandbox">
+          <i data-lucide="terminal"></i>
+          <span>SQL Sandbox</span>
+        </a>
+        <a href="#/profile" class="nav-item" id="nav-profile">
+          <i data-lucide="user"></i>
+          <span>Profile</span>
+        </a>
+      </nav>
+      
+      <!-- User Level/XP Progress Card -->
+      <div class="sidebar-user-level-card" id="sidebar-level-card">
+        <div class="sidebar-level-header">
+          <span class="sidebar-rank-label" id="sidebar-rank-text">Data Novice</span>
+          <span class="sidebar-level-num" id="sidebar-level-text">Lvl 1</span>
+        </div>
+        <div class="sidebar-xp-bar-track">
+          <div class="sidebar-xp-bar-fill" id="sidebar-xp-fill" style="width: 0%"></div>
+        </div>
+        <div style="font-size: 10px; color: var(--text-muted); display: flex; justify-content: space-between; margin-top: 4px;">
+          <span>XP Progress</span>
+          <span id="sidebar-xp-ratio">0 / 500</span>
+        </div>
+      </div>
+      
+      <div class="sidebar-footer">
+        <button id="logout-btn" class="btn btn-outline btn-sm btn-block">
+          <i data-lucide="log-out"></i>
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Panel -->
+    <main id="main-panel" class="main-panel full-width">
+      
+      <!-- Top Navigation Header (Hidden on Auth/Login screens, visible on Dashboard/Learning screens) -->
+      <header id="top-nav" class="top-nav hidden">
+        <div class="top-nav-left">
+          <button id="sidebar-toggle" class="mobile-only-btn" aria-label="Open menu">
+            <i data-lucide="menu"></i>
+          </button>
+          
+          <div class="search-container">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="search-input" placeholder="Search lessons (e.g. ETL, K-Means, OLAP)..." autocomplete="off">
+            <div id="search-results" class="search-results-dropdown hidden"></div>
+          </div>
+        </div>
+        
+        <div class="top-nav-right">
+          <!-- Guided Mode Checkbox -->
+          <div class="guided-mode-toggle">
+            <label class="switch-container">
+              <input type="checkbox" id="guided-mode-checkbox">
+              <span class="slider"></span>
+            </label>
+            <span class="guided-mode-label">Guided Mode</span>
+          </div>
+
+          <!-- Mini Progress bar -->
+          <div class="top-progress-container" title="Overall Completion Progress">
+            <span class="progress-percent-label" id="top-progress-text">0%</span>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="top-progress-fill" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Badges Count -->
+          <a href="#/achievements" class="top-badge-link" title="Unlocked Achievements">
+            <i data-lucide="award" class="gold-icon"></i>
+            <span id="top-achievements-count" class="badge-pill">0</span>
+          </a>
+
+          <!-- Theme Toggle Button -->
+          <button id="theme-toggle-btn" class="top-badge-link" title="Toggle Theme" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; justify-content: center; cursor: pointer; border: 1px solid var(--border-color); background-color: rgba(255, 255, 255, 0.05); color: var(--text-primary);">
+            <i data-lucide="sun" id="theme-icon" style="width: 18px; height: 18px;"></i>
+          </button>
+
+          <!-- Profile quick access -->
+          <div class="profile-quick-access" id="profile-dropdown-trigger">
+            <div class="profile-avatar" id="avatar-letters">US</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- App Main Content Container -->
+      <section id="app" class="app-container">
+        <!-- Rendered views are dynamically injected here -->
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Achievement Unlock Toast Notification -->
+  <div id="achievement-toast-container" class="toast-container"></div>
+
+  <!-- Main scripts -->
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
