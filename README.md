@@ -74,7 +74,6 @@ By default, the platform boots into **In-Memory Mock Database mode** if no Postg
    ```text
    PORT=3000
    DATABASE_URL=postgresql://postgres:your_password@localhost:5432/dataminex
-   JWT_SECRET=your_jwt_secret_key
    NODE_ENV=development
    ```
 4. Restart your server. You will see: `✅ Connected to PostgreSQL database successfully.`
