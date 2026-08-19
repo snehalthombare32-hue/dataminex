@@ -176,31 +176,6 @@ By default, the platform boots into **In-Memory Mock Database mode** if no Postg
 
 ---
 
-## 📸 Screenshots
-Add screenshots of the major features here.
-
-Recommended screenshots:
-* 🏠 Dashboard
-* 💻 SQL Playground
-* 🧩 Star Schema Builder
-* 🛒 Apriori Simulator
-* 📊 BI Dashboard
-* 🏆 Gamification/Profile
-* 🌙 Dark Mode
-
-Example directory structure:
-```text
-screenshots/
-├── dashboard.png
-├── sql-playground.png
-├── star-schema.png
-├── apriori.png
-├── bi-dashboard.png
-└── profile.png
-```
-
----
-
 ## 🎓 Learning Outcomes
 After using DataMineX, students should be able to:
 * Write basic SQL queries.
