@@ -1254,10 +1254,23 @@ function renderLessonReaderView(container, moduleId, lessonId) {
     panelTheory.classList.add('hidden');
     if (panelThird) panelThird.classList.add('hidden');
     
-    // Select lecture type based on current module
-    let videoType = 'etl';
-    if (moduleId === 'mining') videoType = 'kmeans';
-    else if (moduleId === 'analytics') videoType = 'olap';
+    // Select lecture type based on current lesson
+    let videoType = 'dwh-intro';
+    if (moduleId === 'warehouse') {
+      if (lessonId === 'etl-process') {
+        videoType = 'etl';
+      } else if (lessonId === 'fact-dimension' || lessonId === 'star-schema' || lessonId === 'snowflake-schema') {
+        videoType = 'schema';
+      }
+    } else if (moduleId === 'mining') {
+      if (lessonId === 'apriori-algorithm') {
+        videoType = 'apriori';
+      } else {
+        videoType = 'kmeans';
+      }
+    } else if (moduleId === 'analytics') {
+      videoType = 'olap';
+    }
     
     // Launch virtual video player on mounting root
     state.activeVideoPlayer = new VirtualVideoPlayer(videoType, '#video-player-mount');

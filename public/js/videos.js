@@ -60,6 +60,36 @@ const videoData = {
       { start: 20, end: 30, text: "We click Roll-up to aggregate city records into a USA country sum. We click Drill-down to expand Q1 into Jan, Feb, and Mar." },
       { start: 30, end: 40, text: "Finally, we click Pivot. Swapping rows and columns rotates axes to display products as rows and cities as columns." }
     ]
+  },
+  "dwh-intro": {
+    title: "Lecture: Introduction to Data Warehousing",
+    duration: 60,
+    captions: [
+      { start: 0, end: 15, text: "Welcome to the introduction of Data Warehousing. A Data Warehouse is a centralized repository that aggregates data from multiple sources for reporting and analysis." },
+      { start: 15, end: 30, text: "Unlike operational databases (OLTP) which handle day-to-day transactions, DWH systems (OLAP) are structured to support complex analytical queries." },
+      { start: 30, end: 45, text: "Data flows from source applications, passes through a temporary Staging Area for cleaning, and is loaded into the Data Warehouse server." },
+      { start: 45, end: 60, text: "From the DWH, data can be partitioned into specialized Data Marts before business users query it using Dashboards and Reporting tools." }
+    ]
+  },
+  schema: {
+    title: "Lecture: Dimensional Modeling & Schemas",
+    duration: 60,
+    captions: [
+      { start: 0, end: 15, text: "In dimensional modeling, we organize database tables into two categories: Fact Tables (storing numeric measures) and Dimension Tables (storing contextual attributes)." },
+      { start: 15, end: 30, text: "Let's explore the Star Schema. Here, a central Fact Table connects directly to surrounding Dimension Tables in a star-like structure. Dimensions are denormalized for speed." },
+      { start: 30, end: 45, text: "In contrast, a Snowflake Schema normalizes its dimension tables. For example, a Product dimension might split out its Category attribute into a separate normalized table." },
+      { start: 45, end: 60, text: "Choosing between Star and Snowflake involves balancing query performance (Star) against storage efficiency and ease of maintenance (Snowflake)." }
+    ]
+  },
+  apriori: {
+    title: "Lecture: Apriori Association Rules Mining",
+    duration: 60,
+    captions: [
+      { start: 0, end: 15, text: "Welcome to Apriori Association Rule Mining. The goal of Apriori is to find itemsets that frequently appear together in purchase logs, known as Market Basket Analysis." },
+      { start: 15, end: 30, text: "First, we count item frequencies. The Apriori principle states that if an itemset is frequent, all of its subsets must also be frequent. We prune any infrequent items." },
+      { start: 30, end: 45, text: "Next, we generate candidates. We count pairs (like Milk & Bread) and calculate their Support (fraction of transactions containing the pair)." },
+      { start: 45, end: 60, text: "Finally, we calculate Confidence (likelihood of purchasing item B given item A is bought). Lift indicates the correlation strength. Rules with high support and confidence are saved." }
+    ]
   }
 };
 
@@ -294,6 +324,12 @@ export class VirtualVideoPlayer {
       this.drawKMeansLecture(ctx, w, h, t);
     } else if (this.type === 'olap') {
       this.drawOLAPLecture(ctx, w, h, t);
+    } else if (this.type === 'dwh-intro') {
+      this.drawDwhIntroLecture(ctx, w, h, t);
+    } else if (this.type === 'schema') {
+      this.drawSchemaLecture(ctx, w, h, t);
+    } else if (this.type === 'apriori') {
+      this.drawAprioriLecture(ctx, w, h, t);
     } else if (this.type === 'etl-demo') {
       this.drawETLLecture(ctx, w, h, t * 1.5);
     } else if (this.type === 'kmeans-demo') {
@@ -425,7 +461,306 @@ export class VirtualVideoPlayer {
       ctx.fillText("LOADING DATA WAREHOUSE", stageX + 110, stageY - 80);
     }
   }
+
+  // Draw DWH Architecture Introduction Lecture
+  drawDwhIntroLecture(ctx, w, h, t) {
+    const srcX = 80;
+    const stageX = 260;
+    const dwhX = 440;
+    const martX = 570;
+    
+    // Draw 3 Source Databases
+    ctx.fillStyle = '#6366f1';
+    this.drawCylinder(ctx, srcX, 70, 25, 30, '#6366f1', "Source DB 1");
+    this.drawCylinder(ctx, srcX, 150, 25, 30, '#6366f1', "Source DB 2");
+    this.drawCylinder(ctx, srcX, 230, 25, 30, '#6366f1', "File Logs");
+    
+    // Draw Staging Area Box
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(stageX - 45, h / 2 - 50, 90, 100);
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.05)';
+    ctx.fillRect(stageX - 45, h / 2 - 50, 90, 100);
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = 'bold 10px Inter';
+    ctx.textAlign = 'center';
+    ctx.fillText("STAGING AREA", stageX, h / 2 - 60);
+    ctx.font = '9px monospace';
+    ctx.fillText("Extract & Clean", stageX, h / 2);
+    
+    // Draw central DWH Cylinder
+    this.drawCylinder(ctx, dwhX, h / 2, 45, 80, '#8b5cf6', "DWH Server");
+    
+    // Draw Data Marts
+    this.drawCylinder(ctx, martX, 100, 25, 35, '#10b981', "Sales Mart");
+    this.drawCylinder(ctx, martX, 200, 25, 35, '#10b981', "Finance Mart");
+    
+    // Moving data packets
+    if (t < 20) {
+      // Sources to Staging
+      const p = t / 20;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(srcX + 25 + (stageX - 45 - srcX - 25) * p, 70 + (h / 2 - 70) * p, 5, 0, Math.PI * 2);
+      ctx.arc(srcX + 25 + (stageX - 45 - srcX - 25) * p, 150 + (h / 2 - 150) * p, 5, 0, Math.PI * 2);
+      ctx.arc(srcX + 25 + (stageX - 45 - srcX - 25) * p, 230 + (h / 2 - 230) * p, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 11px Inter';
+      ctx.fillText("1. Extracting raw records", stageX, h / 2 + 70);
+    } else if (t >= 20 && t < 40) {
+      // Staging to DWH
+      const p = (t - 20) / 20;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(stageX + 45 + (dwhX - 45 - stageX - 45) * p, h / 2, 6, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#ef4444';
+      // Show some crossed out records in Staging representing cleaning
+      ctx.fillText("✕ Duplicate ID", stageX, h / 2 + 15);
+      
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 11px Inter';
+      ctx.fillText("2. Transforming & Loading DWH", stageX, h / 2 + 70);
+    } else {
+      // DWH to Data Marts
+      const p = (t - 40) / 20;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(dwhX + 45 + (martX - 25 - dwhX - 45) * p, h / 2 - 10 + (100 - (h / 2 - 10)) * p, 5, 0, Math.PI * 2);
+      ctx.arc(dwhX + 45 + (martX - 25 - dwhX - 45) * p, h / 2 + 10 + (200 - (h / 2 + 10)) * p, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 11px Inter';
+      ctx.fillText("3. Distributing to Data Marts & BI", stageX, h / 2 + 70);
+    }
+  }
+
+  // Draw DWH Schemas Lecture (Star & Snowflake)
+  drawSchemaLecture(ctx, w, h, t) {
+    const fX = w / 2;
+    const fY = h / 2;
+    
+    // 1. Draw Fact table in the center
+    ctx.strokeStyle = '#8b5cf6';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(fX - 50, fY - 50, 100, 100);
+    ctx.fillStyle = 'rgba(139, 92, 246, 0.05)';
+    ctx.fillRect(fX - 50, fY - 50, 100, 100);
+    
+    ctx.fillStyle = '#8b5cf6';
+    ctx.font = 'bold 10px Inter';
+    ctx.textAlign = 'center';
+    ctx.fillText("Fact_Sales", fX, fY - 38);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '8px monospace';
+    ctx.fillText("Sale_ID (PK)", fX, fY - 24);
+    ctx.fillText("Time_Key (FK)", fX, fY - 12);
+    ctx.fillText("Product_Key (FK)", fX, fY);
+    ctx.fillText("Store_Key (FK)", fX, fY + 12);
+    ctx.fillText("Amount", fX, fY + 24);
+    
+    // Coordinate dimensions
+    const timeX = fX - 180, timeY = fY - 80;
+    const prodX = fX + 180, prodY = fY - 80;
+    const storeX = fX - 180, storeY = fY + 80;
+    const custX = fX + 180, custY = fY + 80;
+    
+    // Draw 4 radial dimensions (Star Schema base)
+    this.drawDimensionBox(ctx, timeX, timeY, "Dim_Time", ["Time_Key (PK)", "Date", "Month", "Year"]);
+    this.drawDimensionBox(ctx, prodX, prodY, "Dim_Product", ["Product_Key (PK)", "Name", "Category", "Price"]);
+    this.drawDimensionBox(ctx, storeX, storeY, "Dim_Store", ["Store_Key (PK)", "Address", "City", "Country"]);
+    this.drawDimensionBox(ctx, custX, custY, "Dim_Customer", ["Customer_Key (PK)", "Name", "Email"]);
+    
+    // Connector lines representing joins (t >= 15)
+    if (t >= 15) {
+      ctx.strokeStyle = 'rgba(139, 92, 246, 0.5)';
+      ctx.lineWidth = 1.5;
+      
+      // Connect Fact to Time
+      ctx.beginPath(); ctx.moveTo(fX - 50, fY - 20); ctx.lineTo(timeX + 45, timeY + 20); ctx.stroke();
+      // Connect Fact to Product
+      ctx.beginPath(); ctx.moveTo(fX + 50, fY - 10); ctx.lineTo(prodX - 45, prodY + 20); ctx.stroke();
+      // Connect Fact to Store
+      ctx.beginPath(); ctx.moveTo(fX - 50, fY + 20); ctx.lineTo(storeX + 45, storeY - 20); ctx.stroke();
+      // Connect Fact to Customer
+      ctx.beginPath(); ctx.moveTo(fX + 50, fY + 10); ctx.lineTo(custX - 45, custY - 20); ctx.stroke();
+      
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 12px Outfit';
+      ctx.textAlign = 'center';
+      if (t < 30) {
+        ctx.fillText("Star Schema: Denormalized radial dimensions", fX, 30);
+      } else {
+        ctx.fillText("Snowflake Schema: Normalized hierarchical dimensions", fX, 30);
+      }
+    } else {
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = 'bold 12px Outfit';
+      ctx.textAlign = 'center';
+      ctx.fillText("1. Identify Fact Table (measures) vs Dimension Tables (context)", fX, 30);
+    }
+    
+    // Normalized Snowflake Sub-Dimensions (t >= 30)
+    if (t >= 30) {
+      const catX = prodX + 110, catY = prodY;
+      const cityX = storeX, cityY = storeY + 90;
+      
+      this.drawDimensionBox(ctx, catX, catY, "Dim_Category", ["Category_ID (PK)", "Category_Name"]);
+      this.drawDimensionBox(ctx, cityX, cityY, "Dim_City", ["City_ID (PK)", "City_Name", "State"]);
+      
+      // Connect Product to Category
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(prodX + 45, prodY);
+      ctx.lineTo(catX - 45, catY);
+      ctx.stroke();
+      
+      // Connect Store to City
+      ctx.beginPath();
+      ctx.moveTo(storeX, storeY + 30);
+      ctx.lineTo(cityX, cityY - 25);
+      ctx.stroke();
+      
+      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 9px Inter';
+      ctx.textAlign = 'left';
+      ctx.fillText("Normalized", catX - 45, catY - 32);
+      ctx.fillText("Normalized", cityX + 50, cityY - 45);
+    }
+  }
   
+  // Helper for DWH Schemas Lecture Box
+  drawDimensionBox(ctx, x, y, title, columns) {
+    const dx = 90, dy = 60;
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x - dx / 2, y - dy / 2, dx, dy);
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.04)';
+    ctx.fillRect(x - dx / 2, y - dy / 2, dx, dy);
+    
+    ctx.fillStyle = '#10b981';
+    ctx.font = 'bold 9px Inter';
+    ctx.textAlign = 'center';
+    ctx.fillText(title, x, y - dy / 2 + 10);
+    
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '7.5px monospace';
+    columns.forEach((col, idx) => {
+      ctx.fillText(col, x, y - dy / 2 + 22 + (idx * 10));
+    });
+  }
+
+  // Draw Apriori Association Rules Mining Lecture
+  drawAprioriLecture(ctx, w, h, t) {
+    const leftX = 100;
+    const midX = 320;
+    const rightX = 520;
+    
+    // Draw Transactions
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 11px Outfit';
+    ctx.textAlign = 'left';
+    ctx.fillText("Transactions (D)", leftX - 40, 60);
+    
+    const transactions = [
+      "T1: {Milk, Bread}",
+      "T2: {Bread, Butter}",
+      "T3: {Milk, Bread, Butter}"
+    ];
+    
+    ctx.font = '10px monospace';
+    ctx.fillStyle = '#cbd5e1';
+    transactions.forEach((tx, idx) => {
+      ctx.fillText(tx, leftX - 40, 85 + (idx * 25));
+    });
+    
+    // Count support frequencies (t >= 15)
+    if (t >= 15) {
+      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 11px Outfit';
+      ctx.fillText("Frequent 1-Itemsets (L1)", midX - 50, 60);
+      
+      const l1 = [
+        { name: "{Bread}", count: "3 (100%)", prune: false },
+        { name: "{Milk}", count: "2 (67%)", prune: false },
+        { name: "{Butter}", count: "2 (67%)", prune: false }
+      ];
+      
+      ctx.font = '10px monospace';
+      l1.forEach((item, idx) => {
+        const rowY = 85 + (idx * 25);
+        ctx.fillStyle = item.prune ? '#ef4444' : '#cbd5e1';
+        ctx.fillText(`${item.name}: Supp = ${item.count}`, midX - 50, rowY);
+      });
+    }
+    
+    // Generate Candidate 2-Itemsets & Pruning (t >= 30)
+    if (t >= 30) {
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 11px Outfit';
+      ctx.fillText("Candidate 2-Itemsets (C2)", midX - 50, 160);
+      
+      const c2 = [
+        { name: "{Milk, Bread}", count: "2 (67%)", prune: false },
+        { name: "{Bread, Butter}", count: "2 (67%)", prune: false },
+        { name: "{Milk, Butter}", count: "1 (33%)", prune: true } // Supp < 50%
+      ];
+      
+      ctx.font = '10px monospace';
+      c2.forEach((item, idx) => {
+        const rowY = 185 + (idx * 25);
+        if (item.prune) {
+          ctx.fillStyle = '#ef4444';
+          ctx.fillText(`${item.name}: Supp = ${item.count} (PRUNED)`, midX - 50, rowY);
+          
+          // Draw horizontal strike-out line
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(midX - 50, rowY - 3);
+          ctx.lineTo(midX + 110, rowY - 3);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillText(`${item.name}: Supp = ${item.count}`, midX - 50, rowY);
+        }
+      });
+    }
+    
+    // Output association rules and stats (t >= 45)
+    if (t >= 45) {
+      ctx.fillStyle = '#8b5cf6';
+      ctx.font = 'bold 11px Outfit';
+      ctx.fillText("Mined Strong Rules (MinConf=70%)", rightX - 40, 60);
+      
+      const rules = [
+        { rule: "Milk ➔ Bread", conf: "100%", lift: "1.0" },
+        { rule: "Butter ➔ Bread", conf: "100%", lift: "1.0" },
+        { rule: "Bread ➔ Milk", conf: "67%", prune: true } // Conf < 70%
+      ];
+      
+      ctx.font = '9px monospace';
+      rules.forEach((r, idx) => {
+        const rowY = 85 + (idx * 30);
+        if (r.prune) {
+          ctx.fillStyle = '#ef4444';
+          ctx.fillText(`${r.rule}`, rightX - 40, rowY);
+          ctx.fillText(`Conf = ${r.conf} (Discarded)`, rightX - 40, rowY + 12);
+        } else {
+          ctx.fillStyle = '#10b981';
+          ctx.fillText(`${r.rule}`, rightX - 40, rowY);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillText(`Conf = ${r.conf} | Lift = ${r.lift}`, rightX - 40, rowY + 12);
+        }
+      });
+    }
+  }
+
   // Draw K-Means animation frame
   drawKMeansLecture(ctx, w, h, t) {
     const gridX = w / 2;
