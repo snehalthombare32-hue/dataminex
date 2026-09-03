@@ -146,5 +146,81 @@ export const warehouseTheory = [
         content: "1. Roll-up: Summarizes data by climbing up a hierarchy (e.g., City -> Country).\n2. Drill-down: Breaks down summary data into detailed elements (e.g., Year -> Month).\n3. Slice: Selects a single dimension's value to produce a 2D sub-cube.\n4. Dice: Selects values across multiple dimensions to extract a sub-cube.\n5. Pivot: Rotates the data axes to view the data from different perspectives."
       }
     ]
+  },
+  {
+    id: "dwh-vs-datamart",
+    title: "9. Data Warehouse vs Data Mart",
+    blocks: [
+      {
+        type: "definition",
+        title: "Enterprise DWH vs Departmental Data Mart",
+        content: "A Data Warehouse is enterprise-wide, holding integrated data across all business departments (e.g., HR, Sales, Inventory, Finance). A Data Mart is a decentralized, focused subset of a data warehouse tailored for a single business unit or department."
+      },
+      {
+        type: "table",
+        title: "Comparison Matrix",
+        headers: ["Characteristic", "Data Warehouse (DWH)", "Data Mart"],
+        rows: [
+          ["Scope", "Enterprise-wide", "Single department or line-of-business"],
+          ["Data Subjects", "Multiple enterprise subjects", "Single subject (e.g., Marketing only)"],
+          ["Source", "Multiple operational systems", "DWH or single transaction system"],
+          ["Size", "Large (100 GB to Petabytes)", "Smaller (< 100 GB)"],
+          ["Implementation Time", "Months to years", "Weeks to months"]
+        ]
+      }
+    ]
+  },
+  {
+    id: "fact-constellation",
+    title: "10. Fact Constellation (Galaxy Schema)",
+    blocks: [
+      {
+        type: "definition",
+        title: "Fact Constellation Schema",
+        content: "A sophisticated dimensional model containing multiple Fact Tables that share common (conformed) Dimension Tables. Because of multiple centers, it resembles a constellation of stars or galaxy."
+      },
+      {
+        type: "example",
+        title: "Constellation Example",
+        content: "Two fact tables: Fact_Sales and Fact_Shipping, both sharing Dim_Date, Dim_Product, and Dim_Store as conformed dimensions."
+      },
+      {
+        type: "remember",
+        title: "Conformed Dimensions",
+        content: "A dimension that has exactly the same meaning and keys when referenced across multiple fact tables is called a Conformed Dimension."
+      }
+    ]
+  },
+  {
+    id: "factless-fact-table",
+    title: "11. Factless Fact Table",
+    blocks: [
+      {
+        type: "definition",
+        title: "Factless Fact Tables",
+        content: "A fact table that does not contain any numeric measures or metrics. It contains only foreign keys referencing dimension tables. It is used to record events or represent coverage/eligibility."
+      },
+      {
+        type: "example",
+        title: "Event & Coverage Tracking",
+        content: "1. Event Tracking: Student Class Attendance (Student_Key, Course_Key, Date_Key, Room_Key). The occurrence of the row itself represents that attendance took place.\n2. Coverage: Store promotions where no sale occurred."
+      }
+    ]
+  },
+  {
+    id: "aggregate-fact-table",
+    title: "12. Aggregate Fact Table",
+    blocks: [
+      {
+        type: "definition",
+        title: "Aggregate / Summary Fact Tables",
+        content: "A pre-aggregated, summary fact table derived from a detailed atomic fact table. It rolls up fine-grained records into monthly, regional, or quarterly sums to dramatically accelerate analytical query speeds."
+      },
+      {
+        type: "key-concept",
+        title: "Query Optimization",
+        content: "Instead of querying 50 million individual daily checkout transactions to find annual sales, the BI dashboard queries the monthly Aggregate_Sales_Fact table containing only a few thousand records."
+      }
+    ]
   }
 ];

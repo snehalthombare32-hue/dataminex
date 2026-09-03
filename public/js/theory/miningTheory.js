@@ -35,8 +35,40 @@ export const miningTheory = [
     ]
   },
   {
+    id: "mining-architecture",
+    title: "3. Data Mining System Architecture",
+    blocks: [
+      {
+        type: "definition",
+        title: "System Components",
+        content: "A typical data mining system consists of: 1. Database / Data Warehouse / Information Repository, 2. Database / DWH Server, 3. Knowledge Base (domain knowledge & heuristics), 4. Data Mining Engine (algorithms), 5. Pattern Evaluation Module, and 6. Graphical User Interface."
+      },
+      {
+        type: "key-concept",
+        title: "KDD Pipeline Architecture",
+        content: "Raw Data ➔ Selection & Cleaning ➔ Preprocessed Data ➔ Transformation ➔ Transformed Data ➔ Data Mining Engine ➔ Patterns ➔ Evaluation & Presentation ➔ Actionable Knowledge."
+      }
+    ]
+  },
+  {
+    id: "data-exploration",
+    title: "4. Exploratory Data Analysis (EDA)",
+    blocks: [
+      {
+        type: "definition",
+        title: "Visual Data Exploration",
+        content: "Before building models, analysts inspect feature distributions, central tendencies, correlations, and outliers using visual plots."
+      },
+      {
+        type: "key-concept",
+        title: "Essential Plot Types",
+        content: "1. Scatter Plot: Reveals bivariate relationships and correlation trends between two continuous numerical variables.\n2. Bar Chart: Visualizes frequency distributions across discrete categories.\n3. Box Plot (Box & Whisker): Displays the five-number summary (Minimum, Q1, Median, Q3, Maximum) and detects outliers."
+      }
+    ]
+  },
+  {
     id: "apriori-algorithm",
-    title: "3. Association Rule Mining (Apriori)",
+    title: "5. Association Rule Mining (Apriori)",
     blocks: [
       {
         type: "definition",
@@ -57,38 +89,38 @@ export const miningTheory = [
   },
   {
     id: "classification",
-    title: "4. Classification Techniques",
+    title: "6. Classification (Decision Tree & Naive Bayes)",
     blocks: [
       {
         type: "definition",
-        title: "Classification",
-        content: "A supervised learning technique that assigns data objects to a set of predefined, discrete target categories or classes based on input features (e.g., spam vs non-spam email detection)."
+        title: "Supervised Classification",
+        content: "A predictive modeling technique that maps input data attributes into predefined discrete target classes based on labeled training records."
       },
       {
         type: "key-concept",
-        title: "Common Classifiers",
-        content: "Decision Trees, Naive Bayes (probabilistic), Support Vector Machines (SVM), and K-Nearest Neighbors (KNN)."
+        title: "Decision Trees vs Naive Bayes",
+        content: "1. Decision Tree: Uses Information Gain or Gini Index to recursively split dataset into pure branch nodes, producing human-interpretable IF-THEN rules.\n2. Naive Bayes: Probabilistic classifier based on Bayes' Theorem with the assumption of conditional independence among predictors: P(C|X) = P(X|C) * P(C) / P(X)."
       }
     ]
   },
   {
     id: "kmeans-clustering",
-    title: "5. Clustering Analysis (K-Means)",
+    title: "7. Clustering (K-Means & Hierarchical)",
     blocks: [
       {
         type: "definition",
-        title: "Clustering",
-        content: "An unsupervised learning technique that groups similar data points together based on attribute distances, so objects in the same cluster are highly similar, while objects in different clusters are highly distinct."
+        title: "Clustering Analysis",
+        content: "An unsupervised learning technique that groups data objects into clusters such that objects within the same cluster have high similarity, while objects in different clusters have low similarity."
       },
       {
         type: "key-concept",
-        title: "K-Means Algorithm steps",
-        content: "1. Choose the number of clusters (K).\n2. Randomly select K points as initial centroids.\n3. Assign each data point to its closest centroid.\n4. Recompute the centroids of each cluster.\n5. Repeat steps 3 and 4 until centroids stop changing/converge."
+        title: "Partitioning vs Hierarchical",
+        content: "1. K-Means (Partitioning): Divides N data points into K pre-specified clusters by iteratively minimizing the sum of squared distances to cluster centroids.\n2. Hierarchical Clustering (Agglomerative): Starts with each point as an individual cluster and iteratively merges the closest pairs of clusters into a tree structure called a Dendrogram."
       },
       {
         type: "remember",
-        title: "Distance Metrics",
-        content: "Most implementations use Euclidean distance to calculate the proximity between objects and centroids."
+        title: "Euclidean Distance",
+        content: "The standard distance metric between two points (x1, y1) and (x2, y2) is: d = sqrt((x2 - x1)^2 + (y2 - y1)^2)."
       }
     ]
   }

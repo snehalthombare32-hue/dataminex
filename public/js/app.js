@@ -1,6 +1,7 @@
 // DataMineX - Single Page Application Core & Routing Logic
 
 import { warehouseTheory } from './theory/warehouseTheory.js';
+import { lakeTheory } from './theory/lakeTheory.js';
 import { miningTheory } from './theory/miningTheory.js';
 import { analyticsTheory } from './theory/analyticsTheory.js';
 import { renderPracticeQuestion, renderModuleQuiz } from './practice.js';
@@ -9,6 +10,8 @@ import { renderAchievements, showUnlockToast } from './achievements.js';
 import { initETLDemo, initKMeansDemo, initOLAPDemo } from './demos.js';
 import { VirtualVideoPlayer } from './videos.js';
 import { SqlPlayground, ErdSchemaBuilder, AprioriSimulator, BiDashboardBuilder } from './sandboxes.js';
+import { SchemaGenerator } from './schemaGenerator.js';
+import { ClassificationDemo, DataExplorationDemo } from './miningDemos.js';
 
 // Application State
 const state = {
@@ -21,6 +24,7 @@ const state = {
   activeVideoPlayer: null,
   theory: {
     warehouse: warehouseTheory,
+    lake: lakeTheory,
     mining: miningTheory,
     analytics: analyticsTheory
   }
@@ -257,6 +261,7 @@ function calculateProgress() {
   
   const counts = {
     warehouse: { total: 18, done: 0 },
+    lake: { total: 6, done: 0 },
     mining: { total: 12, done: 0 },
     analytics: { total: 10, done: 0 }
   };
@@ -268,15 +273,17 @@ function calculateProgress() {
   });
   
   const overallDone = state.progress.length;
-  const overallTotal = 40;
+  const overallTotal = 46;
   
   const warehousePct = Math.round((counts.warehouse.done / counts.warehouse.total) * 100);
+  const lakePct = Math.round((counts.lake.done / counts.lake.total) * 100);
   const miningPct = Math.round((counts.mining.done / counts.mining.total) * 100);
   const analyticsPct = Math.round((counts.analytics.done / counts.analytics.total) * 100);
   const overallPct = Math.round((overallDone / overallTotal) * 100);
   
   return {
     warehouse: warehousePct,
+    lake: lakePct,
     mining: miningPct,
     analytics: analyticsPct,
     overall: overallPct,
@@ -435,6 +442,26 @@ async function router() {
   else if (hash === '#/sql-sandbox') {
     new SqlPlayground('#app');
   }
+
+  // 10. Automated Dimensional Schema Generator Routing
+  else if (hash === '#/schema-generator') {
+    new SchemaGenerator('#app');
+  }
+
+  // 11. OLAP Operations Visualizer Routing
+  else if (hash === '#/olap-visualizer') {
+    initOLAPDemo('#app', false, () => {});
+  }
+
+  // 12. Exploratory Data Analysis (EDA) Routing
+  else if (hash === '#/data-exploration') {
+    new DataExplorationDemo('#app');
+  }
+
+  // 13. Supervised Classification Visualizer Routing
+  else if (hash === '#/classification') {
+    new ClassificationDemo('#app');
+  }
   
   // Refresh Lucide Icons after template draw
   if (window.lucide) {
@@ -454,6 +481,14 @@ function highlightSidebar(hash) {
     matchId = hash.includes('/demo') ? 'nav-mining-demo' : 'nav-mining';
   } else if (hash.includes('/analytics')) {
     matchId = hash.includes('/demo') ? 'nav-analytics-demo' : 'nav-analytics';
+  } else if (hash.includes('/lake')) {
+    matchId = 'nav-lake';
+  } else if (hash === '#/schema-generator') {
+    matchId = 'nav-schema-generator';
+  } else if (hash === '#/data-exploration') {
+    matchId = 'nav-data-exploration';
+  } else if (hash === '#/classification') {
+    matchId = 'nav-classification';
   } else if (hash === '#/challenges') matchId = 'nav-challenges';
   else if (hash === '#/achievements') matchId = 'nav-achievements';
   else if (hash === '#/progress') matchId = 'nav-progress';
@@ -860,13 +895,37 @@ function renderLearningPathView(container) {
       </div>
       
       <div class="path-arrow-down"></div>
+
+      <!-- Module: Data Lake -->
+      <div class="path-card ${p.lake >= 100 ? 'completed' : 'current'}">
+        <div class="path-header">
+          <div class="path-title-group">
+            <span class="path-icon">🌊</span>
+            <h3 class="syllabus-title">2. Data Lake Architecture</h3>
+          </div>
+          <span class="path-badge ${p.lake >= 100 ? 'badge-completed' : 'badge-current'}">${p.lake >= 100 ? 'COMPLETED' : 'ACTIVE'}</span>
+        </div>
+        <p class="path-desc">Understand Schema-on-Read, Medallion Architecture (Bronze-Silver-Gold), and Data Lake vs DWH comparisons.</p>
+        <div class="path-stats">
+          <span>📚 3 Lessons</span>
+          <span>🛠 3 Architecture Tiers</span>
+          <span>⚡ Interactive</span>
+        </div>
+        <div class="path-progress-container">
+          <div class="path-progress-bar"><div class="path-progress-fill" style="width: ${p.lake}%"></div></div>
+          <span class="path-progress-percent">${p.lake}%</span>
+        </div>
+        <a href="#/module/lake" class="btn btn-primary btn-block" style="margin-top: 10px;">Explore &rarr;</a>
+      </div>
+      
+      <div class="path-arrow-down"></div>
       
       <!-- Module 2 -->
       <div class="path-card ${p.warehouse < 100 ? 'locked' : (p.mining >= 100 ? 'completed' : 'current')}">
         <div class="path-header">
           <div class="path-title-group">
             <span class="path-icon">⛏</span>
-            <h3 class="syllabus-title">2. Data Mining</h3>
+            <h3 class="syllabus-title">3. Data Mining</h3>
           </div>
           <span class="path-badge ${p.warehouse < 100 ? 'badge-locked' : (p.mining >= 100 ? 'badge-completed' : 'badge-current')}">
             ${p.warehouse < 100 ? 'LOCKED' : (p.mining >= 100 ? 'COMPLETED' : 'ACTIVE')}
@@ -925,7 +984,7 @@ function renderLearningPathView(container) {
 
 function renderModuleLandingView(container, moduleId) {
   const p = calculateProgress();
-  const titleMap = { warehouse: "Data Warehouse", mining: "Data Mining", analytics: "Data Analytics" };
+  const titleMap = { warehouse: "Data Warehouse", lake: "Data Lake Architecture", mining: "Data Mining", analytics: "Data Analytics" };
   const title = titleMap[moduleId] || "Module";
   const lessons = state.theory[moduleId] || [];
   const modulePercent = p[moduleId] || 0;
@@ -1102,6 +1161,54 @@ function renderLessonReaderView(container, moduleId, lessonId) {
     thirdPanelHtml = `
       <div id="panel-third" class="lesson-body hidden">
         <div id="erd-puzzle-mount"></div>
+      </div>
+    `;
+  } else if (lessonId === 'snowflake-schema' || lessonId === 'fact-constellation') {
+    thirdTabHtml = `
+      <button class="tab-btn" id="tab-btn-third">
+        <i data-lucide="cpu"></i>
+        <span>Auto Schema Generator</span>
+      </button>
+    `;
+    thirdPanelHtml = `
+      <div id="panel-third" class="lesson-body hidden">
+        <div id="schema-generator-mount"></div>
+      </div>
+    `;
+  } else if (lessonId === 'olap-operations') {
+    thirdTabHtml = `
+      <button class="tab-btn" id="tab-btn-third">
+        <i data-lucide="refresh-cw"></i>
+        <span>OLAP Visualizer</span>
+      </button>
+    `;
+    thirdPanelHtml = `
+      <div id="panel-third" class="lesson-body hidden">
+        <div id="olap-visualizer-mount"></div>
+      </div>
+    `;
+  } else if (lessonId === 'classification') {
+    thirdTabHtml = `
+      <button class="tab-btn" id="tab-btn-third">
+        <i data-lucide="git-branch"></i>
+        <span>Classification Visualizer</span>
+      </button>
+    `;
+    thirdPanelHtml = `
+      <div id="panel-third" class="lesson-body hidden">
+        <div id="classification-mount"></div>
+      </div>
+    `;
+  } else if (lessonId === 'data-exploration') {
+    thirdTabHtml = `
+      <button class="tab-btn" id="tab-btn-third">
+        <i data-lucide="bar-chart-2"></i>
+        <span>EDA Visualizer</span>
+      </button>
+    `;
+    thirdPanelHtml = `
+      <div id="panel-third" class="lesson-body hidden">
+        <div id="data-exploration-mount"></div>
       </div>
     `;
   } else if (lessonId === 'apriori-algorithm') {
@@ -1303,6 +1410,14 @@ function renderLessonReaderView(container, moduleId, lessonId) {
             console.error(e);
           }
         });
+      } else if (lessonId === 'snowflake-schema' || lessonId === 'fact-constellation') {
+        new SchemaGenerator('#schema-generator-mount');
+      } else if (lessonId === 'olap-operations') {
+        initOLAPDemo('#olap-visualizer-mount', false, () => {});
+      } else if (lessonId === 'classification') {
+        new ClassificationDemo('#classification-mount');
+      } else if (lessonId === 'data-exploration') {
+        new DataExplorationDemo('#data-exploration-mount');
       } else if (lessonId === 'apriori-algorithm') {
         new AprioriSimulator('#apriori-simulator-mount');
       } else if (lessonId === 'dashboard-design') {
