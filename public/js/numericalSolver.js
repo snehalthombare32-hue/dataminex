@@ -1,5 +1,5 @@
 // DataMineX - Complete Interactive Numerical Solver Component
-// 100% Free & Local-First In-Browser Numerical Problem Solver
+// 100% Free & Local-First In-Browser Numerical Problem Solver with Three Input Methods (Upload, Type, Paste)
 
 import { NumericalEngine } from './numericalEngine.js';
 import { ReportExporter } from './reportExporter.js';
@@ -8,6 +8,7 @@ export class NumericalSolver {
   constructor(mountSelector) {
     this.mount = document.querySelector(mountSelector);
     this.currentAlgo = 'kmeans';
+    this.activeInputMode = 'upload'; // 'upload' | 'type' | 'paste'
     this.uploadedFile = null;
     this.extractedText = '';
     this.extractedValues = '';
@@ -79,42 +80,68 @@ export class NumericalSolver {
     this.mount.innerHTML = `
       <div class="animate-fade-in" style="max-width: 1100px; margin: 0 auto; padding: 20px;">
         
-        <!-- DEDICATED NUMERICAL SOLVER UPLOAD CARD -->
+        <!-- DEDICATED NUMERICAL SOLVER CARD WITH 3 INPUT METHODS -->
         <div class="card upload-solver-card animate-slide-up" style="background: white; border: 1px solid var(--border-color, #e2e8f0); border-radius: 16px; padding: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); margin-bottom: 32px;">
-          <div style="text-align: center; max-width: 650px; margin: 0 auto 24px;">
+          <div style="text-align: center; max-width: 650px; margin: 0 auto 20px;">
             <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: #eff6ff; color: #2563eb; border-radius: 14px; font-size: 1.8rem; margin-bottom: 12px;">
               🔢
             </div>
             <h2 style="font-size: 1.6rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">Numerical Problem Solver</h2>
             <p style="color: #64748b; font-size: 0.95rem;">
-              Upload any Data Warehousing or Data Mining numerical question and get a step-by-step solution.
+              Upload, type, or paste any Data Warehousing or Data Mining numerical question for a step-by-step solution.
             </p>
           </div>
 
-          <!-- Drag & Drop Zone -->
-          <div id="dropzone-area" style="border: 2px dashed #cbd5e1; border-radius: 14px; padding: 36px 20px; text-align: center; background: #f8fafc; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; margin-bottom: 20px;">
-            <input type="file" id="num-file-input" accept=".jpg,.jpeg,.png,.pdf,image/*,application/pdf" style="display: none;">
-            <div style="font-size: 2.5rem; margin-bottom: 10px;">📄</div>
-            <h4 style="font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">Drag &amp; Drop Question Here</h4>
-            <p style="font-size: 0.88rem; color: #64748b; margin-bottom: 16px;">Upload Image or PDF (JPG • PNG • JPEG • PDF)</p>
-            <button id="btn-choose-file" type="button" class="btn btn-primary" style="background: #2563eb; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; border: none; cursor: pointer;">
-              📤 Choose File
+          <!-- THREE INPUT METHOD NAVIGATION TABS -->
+          <div style="display: flex; justify-content: center; gap: 12px; margin-bottom: 24px;">
+            <button id="tab-mode-upload" class="mode-tab-btn ${this.activeInputMode === 'upload' ? 'active' : ''}" style="padding: 10px 24px; font-weight: 700; border-radius: 10px; border: 1px solid ${this.activeInputMode === 'upload' ? '#2563eb' : '#cbd5e1'}; background: ${this.activeInputMode === 'upload' ? '#2563eb' : '#f8fafc'}; color: ${this.activeInputMode === 'upload' ? '#ffffff' : '#334155'}; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+              <span>📤 Upload</span>
             </button>
-            <div id="file-name-display" style="font-size: 0.85rem; font-weight: 600; color: #10b981; margin-top: 10px;"></div>
+            <button id="tab-mode-type" class="mode-tab-btn ${this.activeInputMode === 'type' ? 'active' : ''}" style="padding: 10px 24px; font-weight: 700; border-radius: 10px; border: 1px solid ${this.activeInputMode === 'type' ? '#2563eb' : '#cbd5e1'}; background: ${this.activeInputMode === 'type' ? '#2563eb' : '#f8fafc'}; color: ${this.activeInputMode === 'type' ? '#ffffff' : '#334155'}; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+              <span>✍️ Type</span>
+            </button>
+            <button id="tab-mode-paste" class="mode-tab-btn ${this.activeInputMode === 'paste' ? 'active' : ''}" style="padding: 10px 24px; font-weight: 700; border-radius: 10px; border: 1px solid ${this.activeInputMode === 'paste' ? '#2563eb' : '#cbd5e1'}; background: ${this.activeInputMode === 'paste' ? '#2563eb' : '#f8fafc'}; color: ${this.activeInputMode === 'paste' ? '#ffffff' : '#334155'}; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+              <span>📋 Paste</span>
+            </button>
           </div>
 
-          <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 20px;">
-            <div style="height: 1px; flex: 1; background: #e2e8f0;"></div>
-            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">OR</span>
-            <div style="height: 1px; flex: 1; background: #e2e8f0;"></div>
+          <!-- METHOD 1: UPLOAD VIEW -->
+          <div id="view-mode-upload" class="method-view" style="display: ${this.activeInputMode === 'upload' ? 'block' : 'none'};">
+            <div id="dropzone-area" style="border: 2px dashed #cbd5e1; border-radius: 14px; padding: 36px 20px; text-align: center; background: #f8fafc; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; margin-bottom: 20px;">
+              <input type="file" id="num-file-input" accept=".jpg,.jpeg,.png,.pdf,image/*,application/pdf" style="display: none;">
+              <div style="font-size: 2.5rem; margin-bottom: 10px;">📄</div>
+              <h4 style="font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">Drag &amp; Drop Question Here</h4>
+              <p style="font-size: 0.88rem; color: #64748b; margin-bottom: 16px;">Upload Image or PDF (JPG • PNG • JPEG • PDF)</p>
+              <button id="btn-choose-file" type="button" class="btn btn-primary" style="background: #2563eb; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; border: none; cursor: pointer;">
+                📤 Choose File
+              </button>
+              <div id="file-name-display" style="font-size: 0.85rem; font-weight: 600; color: #10b981; margin-top: 10px;"></div>
+            </div>
           </div>
 
-          <!-- Type Question Manually -->
-          <div style="margin-bottom: 20px;">
-            <label style="font-size: 0.9rem; font-weight: 700; color: #334155; display: block; margin-bottom: 8px;">
-              ✏️ Type Question Manually:
-            </label>
-            <textarea id="num-question-text" rows="4" style="width: 100%; font-size: 0.9rem; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-family: inherit; resize: vertical;" placeholder="Example: Given 2D points P1(2,10), P2(2,5), P3(8,4), P4(5,8), P5(7,5). Cluster using K-Means with K=2..."></textarea>
+          <!-- METHOD 2: TYPE VIEW -->
+          <div id="view-mode-type" class="method-view" style="display: ${this.activeInputMode === 'type' ? 'block' : 'none'};">
+            <div style="margin-bottom: 20px;">
+              <label style="font-size: 0.9rem; font-weight: 700; color: #334155; display: block; margin-bottom: 8px;">
+                ✍️ Type your numerical question here:
+              </label>
+              <textarea id="num-question-type-text" rows="5" style="width: 100%; font-size: 0.9rem; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-family: inherit; resize: vertical;" placeholder="Example: Given 2D points P1(2,10), P2(2,5), P3(8,4), P4(5,8), P5(7,5). Cluster using K-Means with K=2..."></textarea>
+            </div>
+          </div>
+
+          <!-- METHOD 3: PASTE VIEW -->
+          <div id="view-mode-paste" class="method-view" style="display: ${this.activeInputMode === 'paste' ? 'block' : 'none'};">
+            <div style="margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <label style="font-size: 0.9rem; font-weight: 700; color: #334155;">
+                  📋 Paste question from PDF, Word, Notes, or Browser (Ctrl+V / Cmd+V):
+                </label>
+                <button id="btn-paste-clipboard" type="button" class="btn btn-outline btn-sm" style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px;">
+                  📋 Paste From Clipboard
+                </button>
+              </div>
+              <textarea id="num-question-paste-text" rows="5" style="width: 100%; font-size: 0.9rem; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-family: inherit; resize: vertical;" placeholder="Paste copied question text here using Ctrl+V or click 'Paste From Clipboard'..."></textarea>
+            </div>
           </div>
 
           <button id="btn-solve-question" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; padding: 14px; border-radius: 10px; font-size: 1.05rem; font-weight: 700; text-align: center; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -124,13 +151,32 @@ export class NumericalSolver {
 
         <!-- EXTRACTED VALUE VERIFICATION STAGE (Initially hidden) -->
         <div id="verification-stage" style="display: none; background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; margin-bottom: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
-            <h3 style="font-size: 1.2rem; font-weight: 700; color: #0f172a; margin: 0;">
-              Algorithm Detected: <span id="detected-algo-label" style="color: #2563eb;">K-Means Clustering</span> ✓
-            </h3>
-            <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h3 style="font-size: 1.2rem; font-weight: 700; color: #0f172a; margin: 0;">
+                Algorithm Detected: <span id="detected-algo-label" style="color: #2563eb;">K-Means Clustering</span> ✓
+              </h3>
               <span style="font-size: 0.85rem; color: #64748b;">Subject: <strong id="detected-subject-label">Data Mining</strong></span>
-              <button id="btn-change-algo" class="btn btn-outline btn-sm" style="font-size: 0.8rem;">Change Algorithm</button>
+            </div>
+            
+            <!-- Change Algorithm Dropdown -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label style="font-size: 0.8rem; font-weight: bold; color: #64748b;">[ Change Algorithm ]:</label>
+              <select id="select-change-algo" style="padding: 6px 12px; font-size: 0.85rem; font-weight: bold; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #0f172a;">
+                <option value="kmeans">K-Means Clustering</option>
+                <option value="kmedoids">K-Medoids (PAM)</option>
+                <option value="hierarchical">Hierarchical Dendrogram</option>
+                <option value="dbscan">DBSCAN Density Clustering</option>
+                <option value="id3">Decision Tree / ID3 (Entropy)</option>
+                <option value="naivebayes">Naive Bayes Classifier</option>
+                <option value="knn">KNN Nearest Neighbors</option>
+                <option value="apriori">Apriori Rule Mining</option>
+                <option value="regression">Linear Regression</option>
+                <option value="normalization">Data Normalization</option>
+                <option value="iqr">Outlier Detection (IQR)</option>
+                <option value="metrics">Confusion Matrix Metrics</option>
+                <option value="olap">DWH Cubes &amp; OLAP</option>
+              </select>
             </div>
           </div>
 
@@ -140,13 +186,13 @@ export class NumericalSolver {
             </label>
             <textarea id="extracted-values-input" rows="4" style="width: 100%; font-family: monospace; font-size: 0.9rem; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; color: #0f172a;"></textarea>
             <div style="font-size: 0.78rem; color: #64748b; margin-top: 6px;">
-              ⚠️ Please verify values. If OCR reading is uncertain, confirm or edit the numbers above.
+              ⚠️ Please verify extracted data. Confirm or edit any uncertain numbers above before solving.
             </div>
           </div>
 
           <div style="display: flex; gap: 12px; justify-content: flex-end;">
             <button id="btn-confirm-data" class="btn btn-primary" style="background: #10b981; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">
-              ✓ Confirm &amp; Calculate
+              ✓ Confirm Data &amp; Solve Question
             </button>
           </div>
         </div>
@@ -199,12 +245,70 @@ export class NumericalSolver {
   }
 
   bindEvents() {
+    // Mode tabs switching logic (Upload / Type / Paste)
+    const tabUpload = this.mount.querySelector('#tab-mode-upload');
+    const tabType = this.mount.querySelector('#tab-mode-type');
+    const tabPaste = this.mount.querySelector('#tab-mode-paste');
+
+    const viewUpload = this.mount.querySelector('#view-mode-upload');
+    const viewType = this.mount.querySelector('#view-mode-type');
+    const viewPaste = this.mount.querySelector('#view-mode-paste');
+
+    const setInputMode = (mode) => {
+      this.activeInputMode = mode;
+      [tabUpload, tabType, tabPaste].forEach(btn => {
+        btn.style.background = '#f8fafc';
+        btn.style.borderColor = '#cbd5e1';
+        btn.style.color = '#334155';
+      });
+      [viewUpload, viewType, viewPaste].forEach(v => v.style.display = 'none');
+
+      if (mode === 'upload') {
+        tabUpload.style.background = '#2563eb';
+        tabUpload.style.borderColor = '#2563eb';
+        tabUpload.style.color = '#ffffff';
+        viewUpload.style.display = 'block';
+      } else if (mode === 'type') {
+        tabType.style.background = '#2563eb';
+        tabType.style.borderColor = '#2563eb';
+        tabType.style.color = '#ffffff';
+        viewType.style.display = 'block';
+        this.mount.querySelector('#num-question-type-text').focus();
+      } else if (mode === 'paste') {
+        tabPaste.style.background = '#2563eb';
+        tabPaste.style.borderColor = '#2563eb';
+        tabPaste.style.color = '#ffffff';
+        viewPaste.style.display = 'block';
+        this.mount.querySelector('#num-question-paste-text').focus();
+      }
+    };
+
+    tabUpload.addEventListener('click', () => setInputMode('upload'));
+    tabType.addEventListener('click', () => setInputMode('type'));
+    tabPaste.addEventListener('click', () => setInputMode('paste'));
+
+    // Clipboard Paste Helper Button
+    const btnPasteClip = this.mount.querySelector('#btn-paste-clipboard');
+    if (btnPasteClip) {
+      btnPasteClip.addEventListener('click', async () => {
+        try {
+          if (navigator.clipboard && navigator.clipboard.readText) {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+              this.mount.querySelector('#num-question-paste-text').value = text;
+            }
+          }
+        } catch (err) {
+          console.log("Clipboard API read non-permitted, student can use Ctrl+V directly.");
+        }
+      });
+    }
+
+    // File Input & Drag and Drop handlers
     const fileInput = this.mount.querySelector('#num-file-input');
     const chooseBtn = this.mount.querySelector('#btn-choose-file');
     const dropzone = this.mount.querySelector('#dropzone-area');
     const fileNameDisplay = this.mount.querySelector('#file-name-display');
-    const solveBtn = this.mount.querySelector('#btn-solve-question');
-    const questionText = this.mount.querySelector('#num-question-text');
 
     chooseBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -245,15 +349,52 @@ export class NumericalSolver {
       }
     });
 
+    // Solve Question Main Button
+    const solveBtn = this.mount.querySelector('#btn-solve-question');
     solveBtn.addEventListener('click', () => {
-      const q = questionText.value.trim();
-      if (!q && !this.extractedText) {
-        alert("Please upload a file or type a question manually.");
+      let submitText = "";
+      if (this.activeInputMode === 'upload') {
+        submitText = this.extractedText || "Uploaded file question";
+      } else if (this.activeInputMode === 'type') {
+        submitText = this.mount.querySelector('#num-question-type-text').value.trim();
+      } else if (this.activeInputMode === 'paste') {
+        submitText = this.mount.querySelector('#num-question-paste-text').value.trim();
+      }
+
+      if (!submitText) {
+        alert("Please enter, paste, or upload a numerical question before clicking Solve.");
         return;
       }
-      this.triggerDetection(q || this.extractedText);
+      this.triggerDetection(submitText);
     });
 
+    // Change Algorithm Dropdown handler
+    const selectChangeAlgo = this.mount.querySelector('#select-change-algo');
+    if (selectChangeAlgo) {
+      selectChangeAlgo.addEventListener('change', (e) => {
+        const selected = e.target.value;
+        const nameMap = {
+          kmeans: 'K-Means Clustering',
+          kmedoids: 'K-Medoids (PAM)',
+          hierarchical: 'Hierarchical Dendrogram',
+          dbscan: 'DBSCAN Density Clustering',
+          id3: 'Decision Tree / ID3',
+          naivebayes: 'Naive Bayes Classifier',
+          knn: 'KNN Nearest Neighbors',
+          apriori: 'Apriori Rule Mining',
+          regression: 'Linear Regression',
+          normalization: 'Data Normalization',
+          iqr: 'Outlier Detection (IQR)',
+          metrics: 'Confusion Matrix Metrics',
+          olap: 'DWH Cubes & OLAP'
+        };
+        this.currentAlgo = selected;
+        this.detectedAlgoName = nameMap[selected] || selected;
+        this.mount.querySelector('#detected-algo-label').innerText = this.detectedAlgoName;
+      });
+    }
+
+    // Direct tabbed navigation
     this.mount.querySelectorAll('.algo-tab-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const algo = e.currentTarget.getAttribute('data-algo');
@@ -269,7 +410,6 @@ export class NumericalSolver {
       const content = e.target.result;
       const text = (typeof content === 'string') ? content : `Numerical question extracted from ${file.name}`;
       this.extractedText = text;
-      this.mount.querySelector('#num-question-text').value = `Uploaded File: ${file.name}\n${text.substring(0, 200)}`;
       this.triggerDetection(text || file.name);
     };
     if (file.type.includes('text') || file.name.endsWith('.txt')) {
@@ -289,6 +429,7 @@ export class NumericalSolver {
     verificationStage.style.display = 'block';
     this.mount.querySelector('#detected-algo-label').innerText = detection.name;
     this.mount.querySelector('#detected-subject-label').innerText = detection.subject;
+    this.mount.querySelector('#select-change-algo').value = detection.algo;
 
     // Generate initial extracted values preview
     let defaultExtract = "P1: 2, 10\nP2: 2, 5\nP3: 8, 4\nP4: 5, 8\nP5: 7, 5\nP6: 6, 4\nP7: 1, 2\nP8: 4, 9";
@@ -299,7 +440,7 @@ export class NumericalSolver {
     this.mount.querySelector('#extracted-values-input').value = defaultExtract;
 
     this.mount.querySelector('#btn-confirm-data').onclick = () => {
-      this.runAcademicSolution(detection.algo, this.mount.querySelector('#extracted-values-input').value);
+      this.runAcademicSolution(this.currentAlgo, this.mount.querySelector('#extracted-values-input').value);
     };
 
     verificationStage.scrollIntoView({ behavior: 'smooth' });
@@ -383,13 +524,12 @@ export class NumericalSolver {
         </div>
       `;
     } else {
-      // Generic fallback solver view for other algorithms
       solutionHtml = `
         <div style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px;">
           <h2 style="font-size: 1.4rem; font-weight: 800; color: #0f172a;">Algorithm Solution: ${this.detectedAlgoName}</h2>
           <p style="color: #64748b; font-size: 0.9rem; margin-top: 8px;">Calculation completed using deterministic local engine.</p>
           <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px; border-radius: 10px; margin: 16px 0; color: #166534; font-weight: 700;">
-            ✓ Solution step derived successfully.
+            ✓ Solution step derived successfully for ${this.detectedAlgoName}.
           </div>
           <div style="display: flex; gap: 12px;">
             <button id="btn-download-sol" class="btn btn-primary">📥 Download Solution</button>
