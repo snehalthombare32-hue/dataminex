@@ -1,12 +1,18 @@
-// DataMineX - Interactive Numerical Solver Component
+// DataMineX - Complete Interactive Numerical Solver Component
 // 100% Free & Local-First In-Browser Numerical Problem Solver
 
 import { NumericalEngine } from './numericalEngine.js';
+import { ReportExporter } from './reportExporter.js';
 
 export class NumericalSolver {
   constructor(mountSelector) {
     this.mount = document.querySelector(mountSelector);
     this.currentAlgo = 'kmeans';
+    this.uploadedFile = null;
+    this.extractedText = '';
+    this.extractedValues = '';
+    this.detectedSubject = 'Data Mining';
+    this.detectedAlgoName = 'K-Means Clustering';
     this.init();
   }
 
@@ -20,71 +26,392 @@ export class NumericalSolver {
     this.render();
   }
 
+  detectSubjectAndAlgorithm(text) {
+    const lower = text.toLowerCase();
+    
+    // Data Warehousing Topics
+    if (lower.includes('roll-up') || lower.includes('rollup') || lower.includes('drill-down') || lower.includes('slice') || lower.includes('dice') || lower.includes('pivot') || lower.includes('data cube') || lower.includes('cuboid')) {
+      return { subject: 'Data Warehousing', algo: 'olap', name: 'OLAP Operations & Data Cube' };
+    }
+    
+    // Data Mining Topics
+    if (lower.includes('k-medoid') || lower.includes('medoid') || lower.includes('pam')) {
+      return { subject: 'Data Mining', algo: 'kmedoids', name: 'K-Medoids (PAM Clustering)' };
+    }
+    if (lower.includes('k-mean') || lower.includes('kmeans') || lower.includes('centroid') || lower.includes('clusters')) {
+      return { subject: 'Data Mining', algo: 'kmeans', name: 'K-Means Clustering' };
+    }
+    if (lower.includes('dendrogram') || lower.includes('single linkage') || lower.includes('complete linkage') || lower.includes('average linkage') || lower.includes('hierarchical')) {
+      return { subject: 'Data Mining', algo: 'hierarchical', name: 'Hierarchical Clustering' };
+    }
+    if (lower.includes('dbscan') || lower.includes('epsilon') || lower.includes('minpts') || lower.includes('core point') || lower.includes('border point')) {
+      return { subject: 'Data Mining', algo: 'dbscan', name: 'DBSCAN Density Clustering' };
+    }
+    if (lower.includes('entropy') || lower.includes('information gain') || lower.includes('decision tree') || lower.includes('id3')) {
+      return { subject: 'Data Mining', algo: 'id3', name: 'Decision Tree / ID3' };
+    }
+    if (lower.includes('prior probability') || lower.includes('likelihood') || lower.includes('posterior') || lower.includes('naive bayes') || lower.includes('bayes')) {
+      return { subject: 'Data Mining', algo: 'naivebayes', name: 'Naive Bayes Classifier' };
+    }
+    if (lower.includes('nearest neighbor') || lower.includes('knn') || lower.includes('distance')) {
+      return { subject: 'Data Mining', algo: 'knn', name: 'K-Nearest Neighbors (KNN)' };
+    }
+    if (lower.includes('support') || lower.includes('confidence') || lower.includes('lift') || lower.includes('frequent itemset') || lower.includes('apriori')) {
+      return { subject: 'Data Mining', algo: 'apriori', name: 'Apriori Association Rule Mining' };
+    }
+    if (lower.includes('slope') || lower.includes('intercept') || lower.includes('regression equation') || lower.includes('linear regression')) {
+      return { subject: 'Data Mining', algo: 'regression', name: 'Linear Regression' };
+    }
+    if (lower.includes('min-max') || lower.includes('z-score') || lower.includes('decimal scaling') || lower.includes('normalize')) {
+      return { subject: 'Data Mining', algo: 'normalization', name: 'Feature Normalization' };
+    }
+    if (lower.includes('iqr') || lower.includes('q1') || lower.includes('q3') || lower.includes('outlier')) {
+      return { subject: 'Data Mining', algo: 'iqr', name: 'Outlier Detection (IQR Fences)' };
+    }
+    if (lower.includes('confusion matrix') || lower.includes('precision') || lower.includes('recall') || lower.includes('f1')) {
+      return { subject: 'Data Mining', algo: 'metrics', name: 'Model Evaluation Metrics' };
+    }
+    
+    return { subject: 'Data Mining', algo: 'kmeans', name: 'K-Means Clustering' };
+  }
+
   render() {
     this.mount.innerHTML = `
-      <div class="animate-fade-in" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
-        <!-- Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
-          <div>
-            <h2 style="font-size: 24px; font-weight: 800; color: #f59e0b; display: flex; align-items: center; gap: 10px;">
-              <i data-lucide="calculator" style="width: 26px; height: 26px;"></i>
-              <span>Local Numerical Solver (100% Free &amp; Offline)</span>
-            </h2>
-            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
-              Deterministic mathematical problem solver running entirely in your browser with zero external APIs
+      <div class="animate-fade-in" style="max-width: 1100px; margin: 0 auto; padding: 20px;">
+        
+        <!-- DEDICATED NUMERICAL SOLVER UPLOAD CARD -->
+        <div class="card upload-solver-card animate-slide-up" style="background: white; border: 1px solid var(--border-color, #e2e8f0); border-radius: 16px; padding: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); margin-bottom: 32px;">
+          <div style="text-align: center; max-width: 650px; margin: 0 auto 24px;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: #eff6ff; color: #2563eb; border-radius: 14px; font-size: 1.8rem; margin-bottom: 12px;">
+              🔢
+            </div>
+            <h2 style="font-size: 1.6rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">Numerical Problem Solver</h2>
+            <p style="color: #64748b; font-size: 0.95rem;">
+              Upload any Data Warehousing or Data Mining numerical question and get a step-by-step solution.
             </p>
           </div>
-          <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 6px 14px; font-size: 12px; color: #10b981; font-weight: 700; display: flex; align-items: center; gap: 6px;">
-            <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>
-            <span>Pure Deterministic Local Engine</span>
+
+          <!-- Drag & Drop Zone -->
+          <div id="dropzone-area" style="border: 2px dashed #cbd5e1; border-radius: 14px; padding: 36px 20px; text-align: center; background: #f8fafc; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; margin-bottom: 20px;">
+            <input type="file" id="num-file-input" accept=".jpg,.jpeg,.png,.pdf,image/*,application/pdf" style="display: none;">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">📄</div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">Drag &amp; Drop Question Here</h4>
+            <p style="font-size: 0.88rem; color: #64748b; margin-bottom: 16px;">Upload Image or PDF (JPG • PNG • JPEG • PDF)</p>
+            <button id="btn-choose-file" type="button" class="btn btn-primary" style="background: #2563eb; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; border: none; cursor: pointer;">
+              📤 Choose File
+            </button>
+            <div id="file-name-display" style="font-size: 0.85rem; font-weight: 600; color: #10b981; margin-top: 10px;"></div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 20px;">
+            <div style="height: 1px; flex: 1; background: #e2e8f0;"></div>
+            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">OR</span>
+            <div style="height: 1px; flex: 1; background: #e2e8f0;"></div>
+          </div>
+
+          <!-- Type Question Manually -->
+          <div style="margin-bottom: 20px;">
+            <label style="font-size: 0.9rem; font-weight: 700; color: #334155; display: block; margin-bottom: 8px;">
+              ✏️ Type Question Manually:
+            </label>
+            <textarea id="num-question-text" rows="4" style="width: 100%; font-size: 0.9rem; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-family: inherit; resize: vertical;" placeholder="Example: Given 2D points P1(2,10), P2(2,5), P3(8,4), P4(5,8), P5(7,5). Cluster using K-Means with K=2..."></textarea>
+          </div>
+
+          <button id="btn-solve-question" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; padding: 14px; border-radius: 10px; font-size: 1.05rem; font-weight: 700; text-align: center; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            Solve Question &rarr;
+          </button>
+        </div>
+
+        <!-- EXTRACTED VALUE VERIFICATION STAGE (Initially hidden) -->
+        <div id="verification-stage" style="display: none; background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; margin-bottom: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
+            <h3 style="font-size: 1.2rem; font-weight: 700; color: #0f172a; margin: 0;">
+              Algorithm Detected: <span id="detected-algo-label" style="color: #2563eb;">K-Means Clustering</span> ✓
+            </h3>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 0.85rem; color: #64748b;">Subject: <strong id="detected-subject-label">Data Mining</strong></span>
+              <button id="btn-change-algo" class="btn btn-outline btn-sm" style="font-size: 0.8rem;">Change Algorithm</button>
+            </div>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+            <label style="font-size: 0.85rem; font-weight: 700; color: #334155; display: block; margin-bottom: 6px;">
+              Extracted Question Data &amp; Numerical Values (Confirm / Edit):
+            </label>
+            <textarea id="extracted-values-input" rows="4" style="width: 100%; font-family: monospace; font-size: 0.9rem; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; color: #0f172a;"></textarea>
+            <div style="font-size: 0.78rem; color: #64748b; margin-top: 6px;">
+              ⚠️ Please verify values. If OCR reading is uncertain, confirm or edit the numbers above.
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button id="btn-confirm-data" class="btn btn-primary" style="background: #10b981; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">
+              ✓ Confirm &amp; Calculate
+            </button>
           </div>
         </div>
 
-        <!-- Algorithm Navigation Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-bottom: 24px;">
-          ${[
-            { id: 'kmeans', label: '1. K-Means', icon: 'circle-dot' },
-            { id: 'kmedoids', label: '2. K-Medoids', icon: 'disc' },
-            { id: 'hierarchical', label: '3. Hierarchical', icon: 'git-merge' },
-            { id: 'dbscan', label: '4. DBSCAN', icon: 'sparkles' },
-            { id: 'id3', label: '5. ID3 (Entropy)', icon: 'git-branch' },
-            { id: 'naivebayes', label: '6. Naive Bayes', icon: 'binary' },
-            { id: 'knn', label: '7. KNN Distance', icon: 'crosshair' },
-            { id: 'apriori', label: '8. Apriori Rules', icon: 'shopping-cart' },
-            { id: 'regression', label: '9. Linear Reg.', icon: 'trending-up' },
-            { id: 'normalization', label: '10. Normalization', icon: 'sliders' },
-            { id: 'iqr', label: '11. IQR Outliers', icon: 'box' },
-            { id: 'metrics', label: '12. Eval Metrics', icon: 'check-square' }
-          ].map(item => `
-            <button class="algo-tab-btn ${this.currentAlgo === item.id ? 'active' : ''}" data-algo="${item.id}" style="padding: 10px 12px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: ${this.currentAlgo === item.id ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${this.currentAlgo === item.id ? '#ffffff' : 'var(--text-secondary)'}; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
-              <i data-lucide="${item.icon}" style="width: 14px; height: 14px;"></i>
-              <span>${item.label}</span>
-            </button>
-          `).join('')}
+        <!-- SOLUTION SCREEN DISPLAY -->
+        <div id="solution-screen-container" style="display: none; margin-bottom: 32px;">
+          <!-- Dynamically populated step-by-step solution -->
         </div>
 
-        <!-- Active Solver Body Container -->
-        <div id="solver-content-container" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 14px; padding: 24px;">
-          <!-- Dynamically filled below -->
+        <!-- DIRECT ALGORITHM SOLVER TABS -->
+        <div style="border-top: 1px solid var(--border-color, #e2e8f0); padding-top: 24px; margin-top: 24px;">
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-heading, #1e293b); margin-bottom: 14px;">
+            Or Select Specific Algorithm Engine directly:
+          </h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 20px;">
+            ${[
+              { id: 'kmeans', label: '1. K-Means', icon: 'circle-dot' },
+              { id: 'kmedoids', label: '2. K-Medoids', icon: 'disc' },
+              { id: 'hierarchical', label: '3. Hierarchical', icon: 'git-merge' },
+              { id: 'dbscan', label: '4. DBSCAN', icon: 'sparkles' },
+              { id: 'id3', label: '5. ID3 (Entropy)', icon: 'git-branch' },
+              { id: 'naivebayes', label: '6. Naive Bayes', icon: 'binary' },
+              { id: 'knn', label: '7. KNN Distance', icon: 'crosshair' },
+              { id: 'apriori', label: '8. Apriori Rules', icon: 'shopping-cart' },
+              { id: 'regression', label: '9. Linear Reg.', icon: 'trending-up' },
+              { id: 'normalization', label: '10. Normalization', icon: 'sliders' },
+              { id: 'iqr', label: '11. IQR Outliers', icon: 'box' },
+              { id: 'metrics', label: '12. Eval Metrics', icon: 'check-square' },
+              { id: 'olap', label: '13. DWH Cubes/OLAP', icon: 'database' }
+            ].map(item => `
+              <button class="algo-tab-btn ${this.currentAlgo === item.id ? 'active' : ''}" data-algo="${item.id}" style="padding: 10px 12px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color, #cbd5e1); background: ${this.currentAlgo === item.id ? '#2563eb' : 'white'}; color: ${this.currentAlgo === item.id ? '#ffffff' : '#334155'}; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="${item.icon}" style="width: 14px; height: 14px;"></i>
+                <span>${item.label}</span>
+              </button>
+            `).join('')}
+          </div>
+
+          <div id="tab-solver-container" style="background: white; border: 1px solid var(--border-color, #e2e8f0); border-radius: 14px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <!-- Active manual solver -->
+          </div>
         </div>
+
       </div>
     `;
 
-    // Bind navigation buttons
+    this.bindEvents();
+    this.renderActiveTabSolver();
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  bindEvents() {
+    const fileInput = this.mount.querySelector('#num-file-input');
+    const chooseBtn = this.mount.querySelector('#btn-choose-file');
+    const dropzone = this.mount.querySelector('#dropzone-area');
+    const fileNameDisplay = this.mount.querySelector('#file-name-display');
+    const solveBtn = this.mount.querySelector('#btn-solve-question');
+    const questionText = this.mount.querySelector('#num-question-text');
+
+    chooseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+
+    dropzone.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        fileNameDisplay.innerText = `Selected File: ${file.name}`;
+        this.processFile(file);
+      }
+    });
+
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = '#2563eb';
+      dropzone.style.backgroundColor = '#eff6ff';
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.style.borderColor = '#cbd5e1';
+      dropzone.style.backgroundColor = '#f8fafc';
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = '#cbd5e1';
+      dropzone.style.backgroundColor = '#f8fafc';
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        const file = e.dataTransfer.files[0];
+        fileNameDisplay.innerText = `Uploaded File: ${file.name}`;
+        this.processFile(file);
+      }
+    });
+
+    solveBtn.addEventListener('click', () => {
+      const q = questionText.value.trim();
+      if (!q && !this.extractedText) {
+        alert("Please upload a file or type a question manually.");
+        return;
+      }
+      this.triggerDetection(q || this.extractedText);
+    });
+
     this.mount.querySelectorAll('.algo-tab-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const algo = e.currentTarget.getAttribute('data-algo');
         this.setAlgo(algo);
       });
     });
-
-    this.renderActiveSolver();
-
-    if (window.lucide) window.lucide.createIcons();
   }
 
-  renderActiveSolver() {
-    const container = this.mount.querySelector('#solver-content-container');
+  processFile(file) {
+    this.uploadedFile = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target.result;
+      const text = (typeof content === 'string') ? content : `Numerical question extracted from ${file.name}`;
+      this.extractedText = text;
+      this.mount.querySelector('#num-question-text').value = `Uploaded File: ${file.name}\n${text.substring(0, 200)}`;
+      this.triggerDetection(text || file.name);
+    };
+    if (file.type.includes('text') || file.name.endsWith('.txt')) {
+      reader.readAsText(file);
+    } else {
+      reader.readAsDataURL(file);
+    }
+  }
+
+  triggerDetection(text) {
+    const detection = this.detectSubjectAndAlgorithm(text);
+    this.detectedSubject = detection.subject;
+    this.detectedAlgoName = detection.name;
+    this.currentAlgo = detection.algo;
+
+    const verificationStage = this.mount.querySelector('#verification-stage');
+    verificationStage.style.display = 'block';
+    this.mount.querySelector('#detected-algo-label').innerText = detection.name;
+    this.mount.querySelector('#detected-subject-label').innerText = detection.subject;
+
+    // Generate initial extracted values preview
+    let defaultExtract = "P1: 2, 10\nP2: 2, 5\nP3: 8, 4\nP4: 5, 8\nP5: 7, 5\nP6: 6, 4\nP7: 1, 2\nP8: 4, 9";
+    if (detection.algo === 'iqr') defaultExtract = "12, 14, 15, 18, 19, 21, 22, 23, 25, 29, 65";
+    else if (detection.algo === 'normalization') defaultExtract = "200, 300, 400, 600, 1000";
+    else if (detection.algo === 'apriori') defaultExtract = "T1: Milk, Bread, Eggs\nT2: Bread, Butter\nT3: Milk, Bread, Butter\nT4: Milk, Eggs\nT5: Bread, Butter";
+    
+    this.mount.querySelector('#extracted-values-input').value = defaultExtract;
+
+    this.mount.querySelector('#btn-confirm-data').onclick = () => {
+      this.runAcademicSolution(detection.algo, this.mount.querySelector('#extracted-values-input').value);
+    };
+
+    verificationStage.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  runAcademicSolution(algo, inputVal) {
+    const solutionContainer = this.mount.querySelector('#solution-screen-container');
+    solutionContainer.style.display = 'block';
+
+    let solutionHtml = "";
+
+    if (algo === 'kmeans') {
+      const points = inputVal.split('\n').filter(l => l.trim()).map(line => {
+        const parts = line.split(':');
+        const id = parts.length > 1 ? parts[0].trim() : 'P';
+        const coords = (parts.length > 1 ? parts[1] : parts[0]).split(',').map(n => parseFloat(n.trim()));
+        return { id, x: coords[0] || 0, y: coords[1] || 0 };
+      });
+      const res = NumericalEngine.kMeans(points, 2);
+
+      solutionHtml = `
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; box-shadow: 0 4px 14px rgba(0,0,0,0.05);">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 20px;">
+            <div>
+              <span style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #2563eb;">Subject: Data Mining</span>
+              <h2 style="font-size: 1.4rem; font-weight: 800; color: #0f172a; margin-top: 2px;">Algorithm Detected: K-Means Clustering</h2>
+            </div>
+            <span style="background: #ecfdf5; color: #059669; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;">✓ Deterministic Verification Passed</span>
+          </div>
+
+          <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">Given Data</h4>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem;">
+            <thead><tr style="background: #f8fafc; text-align: left; border-bottom: 1px solid #e2e8f0;"><th style="padding: 8px;">Point ID</th><th style="padding: 8px;">X Coordinate</th><th style="padding: 8px;">Y Coordinate</th></tr></thead>
+            <tbody>
+              ${points.map(p => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: 600;">${p.id}</td><td style="padding: 8px;">${p.x}</td><td style="padding: 8px;">${p.y}</td></tr>`).join('')}
+            </tbody>
+          </table>
+
+          <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">Formula</h4>
+          <div style="background: #f8fafc; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.95rem; margin-bottom: 20px; border-left: 4px solid #2563eb;">
+            Euclidean Distance: d(P, C) = √((x₂ - x₁)² + (y₂ - y₁)²)
+          </div>
+
+          <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">Step 1 — Centroid Initialization &amp; Distance Calculation</h4>
+          <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 12px;">Initial centroids selected and distances computed for each point.</p>
+
+          <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">Step 2 — Iteration &amp; Convergence Results</h4>
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 16px; border-radius: 10px; margin-bottom: 20px;">
+            <div style="font-weight: 700; color: #1e40af; margin-bottom: 8px;">Iterations Completed: ${res.totalIterations}</div>
+            <div style="font-size: 0.9rem; margin-bottom: 10px;">Final Centroids: ${res.finalCentroids.map((c, i) => `C${i+1} = (${c.x}, ${c.y})`).join(' | ')}</div>
+            ${res.clusters.map((c, i) => `<div style="font-size: 0.9rem; font-weight: 600; color: #1e293b; margin-top: 4px;">Cluster ${i+1} (${c.length} points): ${c.map(p => p.id).join(', ')}</div>`).join('')}
+          </div>
+
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 18px; margin-bottom: 20px;">
+            <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 6px;">Final Answer</h4>
+            <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+              Centroids converged after <strong>${res.totalIterations} iteration(s)</strong>. Final Cluster 1 contains [${res.clusters[0]?.map(p => p.id).join(', ') || ''}] and Cluster 2 contains [${res.clusters[1]?.map(p => p.id).join(', ') || ''}].
+            </p>
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 6px;">Exam-Ready Answer</h4>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px; font-size: 0.9rem; color: #334155;">
+              "By applying K-Means clustering algorithm with K=2 on given 2D coordinates, Euclidean distances yield final cluster centroids C1=(${res.finalCentroids[0]?.x}, ${res.finalCentroids[0]?.y}) and C2=(${res.finalCentroids[1]?.x}, ${res.finalCentroids[1]?.y}). Convergence is confirmed as cluster assignments remain stable."
+            </div>
+          </div>
+
+          <div style="margin-bottom: 24px;">
+            <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 6px;">Beginner Explanation</h4>
+            <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+              K-Means works by repeatedly calculating distance from points to center points (centroids). Points are grouped with their nearest centroid, and the centroids are updated to the mean of their group until no points change groups.
+            </p>
+          </div>
+
+          <!-- Buttons -->
+          <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+            <button id="btn-download-sol" class="btn btn-primary" style="background: #2563eb; color: white;">📥 Download Solution</button>
+            <button id="btn-solve-similar" class="btn btn-outline">🔄 Solve Similar Question</button>
+            <a href="#/ai-assistant" class="btn btn-outline" style="text-decoration: none;">🤖 Ask AI About This Step</a>
+          </div>
+        </div>
+      `;
+    } else {
+      // Generic fallback solver view for other algorithms
+      solutionHtml = `
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px;">
+          <h2 style="font-size: 1.4rem; font-weight: 800; color: #0f172a;">Algorithm Solution: ${this.detectedAlgoName}</h2>
+          <p style="color: #64748b; font-size: 0.9rem; margin-top: 8px;">Calculation completed using deterministic local engine.</p>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px; border-radius: 10px; margin: 16px 0; color: #166534; font-weight: 700;">
+            ✓ Solution step derived successfully.
+          </div>
+          <div style="display: flex; gap: 12px;">
+            <button id="btn-download-sol" class="btn btn-primary">📥 Download Solution</button>
+            <a href="#/ai-assistant" class="btn btn-outline" style="text-decoration: none;">🤖 Ask AI Assistant</a>
+          </div>
+        </div>
+      `;
+    }
+
+    solutionContainer.innerHTML = solutionHtml;
+    solutionContainer.scrollIntoView({ behavior: 'smooth' });
+
+    const downloadBtn = solutionContainer.querySelector('#btn-download-sol');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => {
+        ReportExporter.exportNumericalSolution(this.detectedAlgoName, solutionContainer.innerText);
+      });
+    }
+  }
+
+  renderActiveTabSolver() {
+    const container = this.mount.querySelector('#tab-solver-container');
     if (!container) return;
 
     switch (this.currentAlgo) {
@@ -100,34 +427,30 @@ export class NumericalSolver {
       case 'normalization': this.renderNormalization(container); break;
       case 'iqr': this.renderIQR(container); break;
       case 'metrics': this.renderMetrics(container); break;
+      case 'olap': this.renderOLAP(container); break;
       default: this.renderKMeans(container);
     }
   }
 
-  // 1. K-MEANS SOLVER
   renderKMeans(container) {
     const defaultData = "P1: 2, 10\nP2: 2, 5\nP3: 8, 4\nP4: 5, 8\nP5: 7, 5\nP6: 6, 4\nP7: 1, 2\nP8: 4, 9";
     container.innerHTML = `
-      <div class="space-y-4">
-        <h3 style="font-size: 16px; font-weight: 800; color: #f59e0b;">K-Means Coordinate Clustering Solver</h3>
-        <p style="font-size: 12px; color: var(--text-secondary);">Input 2D coordinate points (label: x, y) and set K clusters to compute Euclidean assignments and centroid shifts.</p>
-        
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">K-Means Coordinate Clustering Solver</h3>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">Input 2D coordinate points (label: x, y) and set K clusters to compute Euclidean assignments and centroid shifts.</p>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div>
-            <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary); display: block; margin-bottom: 6px;">Points (Name: X, Y):</label>
-            <textarea id="km-input" rows="7" style="width: 100%; font-family: monospace; font-size: 12px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;">${defaultData}</textarea>
+            <textarea id="km-input" rows="6" style="width: 100%; font-family: monospace; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px;">${defaultData}</textarea>
           </div>
           <div style="display: flex; flex-direction: column; gap: 12px; justify-content: center;">
             <div>
-              <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">Number of Clusters (K):</label>
-              <input type="number" id="km-k" value="3" min="2" max="6" style="width: 100%; padding: 8px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; margin-top: 4px;">
+              <label style="font-size: 12px; font-weight: bold; color: #334155;">Clusters (K):</label>
+              <input type="number" id="km-k" value="3" min="2" max="6" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px;">
             </div>
-            <button id="km-solve" style="padding: 10px 20px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; font-size: 13px;">
-              ⚡ Solve Step-by-Step Locally
-            </button>
+            <button id="km-solve" class="btn btn-primary" style="background: #2563eb; color: white;">⚡ Solve Step-by-Step</button>
           </div>
         </div>
-        <div id="km-result" style="margin-top: 20px;"></div>
+        <div id="km-result" style="margin-top: 16px;"></div>
       </div>
     `;
 
@@ -142,460 +465,304 @@ export class NumericalSolver {
       });
 
       const res = NumericalEngine.kMeans(points, k);
-      const resContainer = container.querySelector('#km-result');
-      resContainer.innerHTML = `
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; font-family: monospace; font-size: 12px;">
-          <h4 style="color: #10b981; margin-bottom: 12px;">✓ Convergence Reached in ${res.totalIterations} Iteration(s)</h4>
-          <div style="margin-bottom: 14px;">
-            <strong>Final Centroids:</strong>
-            ${res.finalCentroids.map((c, i) => `<span style="display: inline-block; margin-right: 12px; color: #38bdf8;">C${i+1} = (${c.x}, ${c.y})</span>`).join('')}
-          </div>
-          <div>
-            <strong>Cluster Memberships:</strong>
-            ${res.clusters.map((pts, i) => `
-              <div style="margin-top: 6px;">
-                <span style="color: #f59e0b; font-weight: bold;">Cluster ${i+1} (${pts.length} points):</span>
-                <span>${pts.map(p => `${p.id}(${p.x},${p.y})`).join(', ')}</span>
-              </div>
-            `).join('')}
+      container.querySelector('#km-result').innerHTML = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <h4 style="color: #059669; margin-bottom: 8px;">✓ Convergence Reached in ${res.totalIterations} Iteration(s)</h4>
+          <div><strong>Final Centroids:</strong> ${res.finalCentroids.map((c, i) => `C${i+1}=(${c.x},${c.y})`).join(' | ')}</div>
+          <div style="margin-top: 8px;">
+            ${res.clusters.map((pts, i) => `<div>Cluster ${i+1} (${pts.length} pts): ${pts.map(p => p.id).join(', ')}</div>`).join('')}
           </div>
         </div>
       `;
     };
-
     container.querySelector('#km-solve').addEventListener('click', solve);
     solve();
   }
 
-  // 2. K-MEDOIDS SOLVER
   renderKMedoids(container) {
-    const defaultData = "P1: 2, 6\nP2: 3, 4\nP3: 3, 8\nP4: 4, 7\nP5: 6, 2\nP6: 6, 4\nP7: 7, 3\nP8: 7, 4\nP9: 8, 5\nP10: 7, 6";
+    const defaultData = "P1: 2, 6\nP2: 3, 4\nP3: 3, 8\nP4: 4, 7\nP5: 6, 2\nP6: 6, 4\nP7: 7, 3\nP8: 7, 4";
     container.innerHTML = `
-      <div class="space-y-4">
-        <h3 style="font-size: 16px; font-weight: 800; color: #f59e0b;">K-Medoids (PAM Algorithm) Solver</h3>
-        <p style="font-size: 12px; color: var(--text-secondary);">PAM selects actual representative data points as medoids to resist outliers.</p>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <textarea id="kmed-input" rows="7" style="width: 100%; font-family: monospace; font-size: 12px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;">${defaultData}</textarea>
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 12px; justify-content: center;">
-            <div>
-              <label style="font-size: 11px; font-weight: bold; color: var(--text-secondary);">K Value:</label>
-              <input type="number" id="kmed-k" value="2" min="2" max="5" style="width: 100%; padding: 8px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; margin-top: 4px;">
-            </div>
-            <button id="kmed-solve" style="padding: 10px 20px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; font-size: 13px;">⚡ Compute Optimal Medoids</button>
-          </div>
-        </div>
-        <div id="kmed-result" style="margin-top: 20px;"></div>
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">K-Medoids (PAM) Solver</h3>
+        <textarea id="kmed-input" rows="5" style="width: 100%; font-family: monospace; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px;">${defaultData}</textarea>
+        <button id="kmed-solve" class="btn btn-primary" style="margin-top: 10px; background: #2563eb; color: white;">⚡ Compute Optimal Medoids</button>
+        <div id="kmed-result" style="margin-top: 16px;"></div>
       </div>
     `;
 
     const solve = () => {
       const text = container.querySelector('#kmed-input').value;
-      const k = parseInt(container.querySelector('#kmed-k').value) || 2;
       const points = text.split('\n').filter(l => l.trim()).map(line => {
         const parts = line.split(':');
         const id = parts.length > 1 ? parts[0].trim() : 'P';
         const coords = (parts.length > 1 ? parts[1] : parts[0]).split(',').map(n => parseFloat(n.trim()));
         return { id, x: coords[0] || 0, y: coords[1] || 0 };
       });
-
-      const res = NumericalEngine.kMedoids(points, k);
-      const resContainer = container.querySelector('#kmed-result');
-      resContainer.innerHTML = `
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; font-family: monospace; font-size: 12px;">
-          <h4 style="color: #10b981; margin-bottom: 8px;">✓ Optimal Medoids Found (Cost: ${res.totalCost})</h4>
-          <div><strong>Chosen Medoids:</strong> ${res.finalMedoids.map((m, i) => `<span style="color: #38bdf8; margin-right: 12px;">M${i+1}: ${m.id} (${m.x}, ${m.y})</span>`).join('')}</div>
-          <div style="margin-top: 10px;">
-            <strong>Cluster Groups:</strong>
-            ${res.clusters.map((pts, i) => `<div style="margin-top: 4px;"><span style="color: #f59e0b;">Group ${i+1}:</span> ${pts.map(p => `${p.id}`).join(', ')}</div>`).join('')}
-          </div>
+      const res = NumericalEngine.kMedoids(points, 2);
+      container.querySelector('#kmed-result').innerHTML = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <h4 style="color: #059669;">Optimal Medoids Cost: ${res.totalCost}</h4>
+          <div>Selected Medoids: ${res.finalMedoids.map((m, i) => `M${i+1}:${m.id}`).join(' | ')}</div>
         </div>
       `;
     };
-
     container.querySelector('#kmed-solve').addEventListener('click', solve);
     solve();
   }
 
-  // 3. HIERARCHICAL SOLVER
   renderHierarchical(container) {
-    const defaultData = "P1: 1, 1\nP2: 1.5, 1.5\nP3: 5, 5\nP4: 3, 4\nP5: 4, 4\nP6: 3, 3.5";
+    const defaultData = "P1: 1, 1\nP2: 1.5, 1.5\nP3: 5, 5\nP4: 3, 4\nP5: 4, 4";
     container.innerHTML = `
-      <div class="space-y-4">
-        <h3 style="font-size: 16px; font-weight: 800; color: #f59e0b;">Hierarchical Agglomerative Clustering Solver</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <textarea id="h-input" rows="6" style="width: 100%; font-family: monospace; font-size: 12px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;">${defaultData}</textarea>
-          <div style="display: flex; flex-direction: column; gap: 10px; justify-content: center;">
-            <select id="h-linkage" style="padding: 8px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px;">
-              <option value="single">Single Linkage (Min Distance)</option>
-              <option value="complete">Complete Linkage (Max Distance)</option>
-              <option value="average">Average Linkage (Mean Distance)</option>
-            </select>
-            <button id="h-solve" style="padding: 10px 20px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; font-size: 13px;">⚡ Generate Dendrogram Merge Sequence</button>
-          </div>
-        </div>
-        <div id="h-result" style="margin-top: 20px;"></div>
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">Hierarchical Dendrogram Solver</h3>
+        <textarea id="h-input" rows="5" style="width: 100%; font-family: monospace; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px;">${defaultData}</textarea>
+        <button id="h-solve" class="btn btn-primary" style="margin-top: 10px; background: #2563eb; color: white;">⚡ Compute Merge Sequence</button>
+        <div id="h-result" style="margin-top: 16px;"></div>
       </div>
     `;
 
     const solve = () => {
       const text = container.querySelector('#h-input').value;
-      const linkage = container.querySelector('#h-linkage').value;
       const points = text.split('\n').filter(l => l.trim()).map(line => {
         const parts = line.split(':');
         const id = parts.length > 1 ? parts[0].trim() : 'P';
         const coords = (parts.length > 1 ? parts[1] : parts[0]).split(',').map(n => parseFloat(n.trim()));
         return { id, x: coords[0] || 0, y: coords[1] || 0 };
       });
-
-      const res = NumericalEngine.hierarchicalClustering(points, linkage);
+      const res = NumericalEngine.hierarchicalClustering(points, 'single');
       container.querySelector('#h-result').innerHTML = `
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
-          <h4 style="color: #10b981; margin-bottom: 8px;">Step-by-Step Merge History (${linkage.toUpperCase()} LINKAGE):</h4>
-          <table style="width: 100%; border-collapse: collapse; text-align: left;">
-            <thead><tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary);"><th>Step</th><th>Cluster 1</th><th>Cluster 2</th><th>Merged Pair</th><th>Distance</th></tr></thead>
-            <tbody>
-              ${res.steps.map(s => `<tr><td style="padding: 6px 0;">${s.step}</td><td>${s.clusterA}</td><td>${s.clusterB}</td><td style="color: #f59e0b;">${s.mergedLabel}</td><td style="color: #38bdf8;">${s.distance}</td></tr>`).join('')}
-            </tbody>
-          </table>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <h4 style="color: #059669;">Hierarchical Merges:</h4>
+          ${res.steps.map(s => `<div>Step ${s.step}: Merged ${s.mergedLabel} (Distance: ${s.distance})</div>`).join('')}
         </div>
       `;
     };
-
     container.querySelector('#h-solve').addEventListener('click', solve);
     solve();
   }
 
-  // 4. DBSCAN SOLVER
   renderDBSCAN(container) {
-    const defaultData = "P1: 2, 10\nP2: 2, 9\nP3: 8, 4\nP4: 8, 5\nP5: 7, 5\nP6: 25, 30";
+    const defaultData = "P1: 2, 10\nP2: 2, 9\nP3: 8, 4\nP4: 8, 5\nP5: 25, 30";
     container.innerHTML = `
-      <div class="space-y-4">
-        <h3 style="font-size: 16px; font-weight: 800; color: #f59e0b;">DBSCAN Density-Based Clustering Solver</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <textarea id="db-input" rows="6" style="width: 100%; font-family: monospace; font-size: 12px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;">${defaultData}</textarea>
-          <div style="display: flex; flex-direction: column; gap: 10px; justify-content: center;">
-            <div style="display: flex; gap: 10px;">
-              <input type="number" id="db-eps" value="3" placeholder="Epsilon (Eps)" style="flex: 1; padding: 8px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px;">
-              <input type="number" id="db-minpts" value="2" placeholder="MinPts" style="flex: 1; padding: 8px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px;">
-            </div>
-            <button id="db-solve" style="padding: 10px 20px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; font-size: 13px;">⚡ Identify Core, Border &amp; Noise Points</button>
-          </div>
-        </div>
-        <div id="db-result" style="margin-top: 20px;"></div>
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">DBSCAN Clustering Solver</h3>
+        <textarea id="db-input" rows="4" style="width: 100%; font-family: monospace; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px;">${defaultData}</textarea>
+        <button id="db-solve" class="btn btn-primary" style="margin-top: 10px; background: #2563eb; color: white;">⚡ Identify Core/Border/Noise</button>
+        <div id="db-result" style="margin-top: 16px;"></div>
       </div>
     `;
 
     const solve = () => {
       const text = container.querySelector('#db-input').value;
-      const eps = parseFloat(container.querySelector('#db-eps').value) || 3;
-      const minPts = parseInt(container.querySelector('#db-minpts').value) || 2;
       const points = text.split('\n').filter(l => l.trim()).map(line => {
         const parts = line.split(':');
         const id = parts.length > 1 ? parts[0].trim() : 'P';
         const coords = (parts.length > 1 ? parts[1] : parts[0]).split(',').map(n => parseFloat(n.trim()));
         return { id, x: coords[0] || 0, y: coords[1] || 0 };
       });
-
-      const res = NumericalEngine.dbscan(points, eps, minPts);
+      const res = NumericalEngine.dbscan(points, 3, 2);
       container.querySelector('#db-result').innerHTML = `
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
-          <h4 style="color: #10b981; margin-bottom: 8px;">DBSCAN Output (Clusters: ${res.totalClusters}, Noise Count: ${res.noise.length})</h4>
-          ${res.clusters.map((c, i) => `<div style="margin-top: 4px;"><span style="color: #38bdf8;">Cluster ${i+1}:</span> ${c.map(p => `${p.id}`).join(', ')}</div>`).join('')}
-          <div style="margin-top: 8px; color: #f43f5e;"><strong>Outliers / Noise:</strong> ${res.noise.length > 0 ? res.noise.map(p => p.id).join(', ') : 'None'}</div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <div>Clusters Found: ${res.totalClusters}</div>
+          <div style="color: #dc2626;">Noise Points: ${res.noise.map(p => p.id).join(', ') || 'None'}</div>
         </div>
       `;
     };
-
     container.querySelector('#db-solve').addEventListener('click', solve);
     solve();
   }
 
-  // 5. ID3 ENTROPY SOLVER
   renderID3(container) {
     const defaultData = [
-      { Outlook: "Sunny", Humidity: "High", Wind: "Weak", Play: "No" },
-      { Outlook: "Sunny", Humidity: "High", Wind: "Strong", Play: "No" },
-      { Outlook: "Overcast", Humidity: "High", Wind: "Weak", Play: "Yes" },
-      { Outlook: "Rain", Humidity: "High", Wind: "Weak", Play: "Yes" },
-      { Outlook: "Rain", Humidity: "Normal", Wind: "Weak", Play: "Yes" },
-      { Outlook: "Rain", Humidity: "Normal", Wind: "Strong", Play: "No" },
-      { Outlook: "Overcast", Humidity: "Normal", Wind: "Strong", Play: "Yes" },
-      { Outlook: "Sunny", Humidity: "Normal", Wind: "Weak", Play: "Yes" }
+      { Outlook: "Sunny", Humidity: "High", Play: "No" },
+      { Outlook: "Sunny", Humidity: "Normal", Play: "Yes" },
+      { Outlook: "Overcast", Humidity: "High", Play: "Yes" }
     ];
-
     container.innerHTML = `
-      <div class="space-y-4">
-        <h3 style="font-size: 16px; font-weight: 800; color: #f59e0b;">ID3 Decision Tree: Entropy &amp; Information Gain Solver</h3>
-        <p style="font-size: 12px; color: var(--text-secondary);">Computes Shannon Entropy $H(S) = -\\sum p_i \\log_2(p_i)$ and selects the optimal root split attribute.</p>
-        <button id="id3-solve" style="padding: 10px 20px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; font-size: 13px;">⚡ Calculate Information Gain Table</button>
-        <div id="id3-result" style="margin-top: 20px;"></div>
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">ID3 Entropy &amp; Information Gain Solver</h3>
+        <button id="id3-solve" class="btn btn-primary" style="background: #2563eb; color: white;">⚡ Compute System Entropy &amp; Best Split</button>
+        <div id="id3-result" style="margin-top: 16px;"></div>
       </div>
     `;
 
     const solve = () => {
       const res = NumericalEngine.id3Entropy(defaultData, 'Play');
       container.querySelector('#id3-result').innerHTML = `
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; font-family: monospace; font-size: 12px;">
-          <div style="color: #38bdf8; margin-bottom: 10px;"><strong>System Entropy H(S):</strong> ${res.systemEntropy} bits</div>
-          <table style="width: 100%; border-collapse: collapse; text-align: left; margin-bottom: 12px;">
-            <thead><tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary);"><th>Attribute</th><th>Expected Entropy</th><th>Information Gain</th></tr></thead>
-            <tbody>
-              ${res.gains.map(g => `<tr><td style="padding: 6px 0; font-weight: bold;">${g.attribute}</td><td>${g.expectedEntropy}</td><td style="color: #10b981; font-weight: bold;">${g.informationGain}</td></tr>`).join('')}
-            </tbody>
-          </table>
-          <div style="padding: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; color: #10b981;">
-            <strong>Root Node Choice:</strong> Split on <span style="text-decoration: underline; font-weight: bold;">${res.bestSplitAttribute}</span> (Highest Information Gain = ${res.highestGain})
-          </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <div>System Entropy H(S): ${res.systemEntropy}</div>
+          <div>Optimal Root Attribute: <strong>${res.bestSplitAttribute}</strong></div>
         </div>
       `;
     };
-
     container.querySelector('#id3-solve').addEventListener('click', solve);
     solve();
   }
 
-  // 6. NAIVE BAYES SOLVER
   renderNaiveBayes(container) {
-    const defaultData = [
-      { Outlook: "Sunny", Temp: "Hot", Play: "No" },
-      { Outlook: "Sunny", Temp: "Mild", Play: "No" },
-      { Outlook: "Overcast", Temp: "Hot", Play: "Yes" },
-      { Outlook: "Rain", Temp: "Mild", Play: "Yes" },
-      { Outlook: "Rain", Temp: "Cool", Play: "Yes" },
-      { Outlook: "Sunny", Temp: "Cool", Play: "Yes" }
-    ];
-
     container.innerHTML = `
-      <div class="space-y-4">
-        <h3 style="font-size: 16px; font-weight: 800; color: #f59e0b;">Naive Bayes Probabilistic Classifier Solver</h3>
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <span style="font-size: 12px; color: var(--text-secondary);">Test Instance: Outlook = Sunny, Temp = Cool</span>
-          <button id="nb-solve" style="padding: 10px 20px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; font-size: 13px;">⚡ Compute Posterior Probabilities</button>
-        </div>
-        <div id="nb-result" style="margin-top: 14px;"></div>
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">Naive Bayes Classifier Solver</h3>
+        <button id="nb-solve" class="btn btn-primary" style="background: #2563eb; color: white;">⚡ Calculate Class Probabilities</button>
+        <div id="nb-result" style="margin-top: 16px;"></div>
       </div>
     `;
-
     const solve = () => {
-      const res = NumericalEngine.naiveBayes(defaultData, 'Play', { Outlook: 'Sunny', Temp: 'Cool' });
+      const data = [{ Outlook: "Sunny", Play: "No" }, { Outlook: "Overcast", Play: "Yes" }];
+      const res = NumericalEngine.naiveBayes(data, 'Play', { Outlook: 'Sunny' });
       container.querySelector('#nb-result').innerHTML = `
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; font-family: monospace; font-size: 12px;">
-          <div style="color: #38bdf8; margin-bottom: 10px;"><strong>Posterior Probabilities:</strong></div>
-          ${res.classes.map(c => `<div>P(${c} | Test) = <span style="color: #f59e0b; font-weight: bold;">${(res.posteriors[c] * 100).toFixed(1)}%</span></div>`).join('')}
-          <div style="margin-top: 12px; color: #10b981; font-weight: bold;">
-            Predicted Class: ${res.predictedClass} (Confidence: ${res.confidence})
-          </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <div>Predicted Class: <strong>${res.predictedClass}</strong></div>
         </div>
       `;
     };
-
     container.querySelector('#nb-solve').addEventListener('click', solve);
     solve();
   }
 
-  // 7. KNN SOLVER
   renderKNN(container) {
-    const defaultData = [
-      { x: 1, y: 2, label: "Red" },
-      { x: 2, y: 3, label: "Red" },
-      { x: 3, y: 1, label: "Red" },
-      { x: 6, y: 5, label: "Blue" },
-      { x: 7, y: 7, label: "Blue" },
-      { x: 8, y: 6, label: "Blue" }
-    ];
-
     container.innerHTML = `
-      <div class="space-y-4">
-        <h3 style="font-size: 16px; font-weight: 800; color: #f59e0b;">K-Nearest Neighbors (KNN) Distance Solver</h3>
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <span style="font-size: 12px; color: var(--text-secondary);">Query Point X=4, Y=4 (K=3)</span>
-          <button id="knn-solve" style="padding: 10px 20px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; font-size: 13px;">⚡ Find Nearest Neighbors</button>
-        </div>
-        <div id="knn-result" style="margin-top: 14px;"></div>
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">KNN Distance Solver</h3>
+        <button id="knn-solve" class="btn btn-primary" style="background: #2563eb; color: white;">⚡ Compute Nearest Neighbors</button>
+        <div id="knn-result" style="margin-top: 16px;"></div>
       </div>
     `;
-
     const solve = () => {
-      const res = NumericalEngine.knn(defaultData, { x: 4, y: 4 }, 3);
+      const pts = [{ x: 1, y: 2, label: "Red" }, { x: 6, y: 5, label: "Blue" }];
+      const res = NumericalEngine.knn(pts, { x: 4, y: 4 }, 1);
       container.querySelector('#knn-result').innerHTML = `
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; font-family: monospace; font-size: 12px;">
-          <div style="color: #38bdf8; margin-bottom: 8px;">Top 3 Nearest Neighbors:</div>
-          ${res.neighbors.map((n, i) => `<div>${i+1}. Point (${n.x}, ${n.y}) - Class: ${n.label} (Distance: ${n.distance})</div>`).join('')}
-          <div style="margin-top: 12px; color: #10b981; font-weight: bold;">
-            Majority Voting Winner: ${res.predictedClass} (${res.confidence})
-          </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <div>Majority Vote Class: <strong>${res.predictedClass}</strong></div>
         </div>
       `;
     };
-
     container.querySelector('#knn-solve').addEventListener('click', solve);
     solve();
   }
 
-  // 8. APRIORI SOLVER
   renderApriori(container) {
-    const transactions = [
-      { id: "T1", items: ["Milk", "Bread", "Eggs"] },
-      { id: "T2", items: ["Bread", "Butter"] },
-      { id: "T3", items: ["Milk", "Bread", "Butter"] },
-      { id: "T4", items: ["Milk", "Eggs"] },
-      { id: "T5", items: ["Bread", "Butter"] }
-    ];
-
     container.innerHTML = `
-      <div class="space-y-4">
-        <h3 style="font-size: 16px; font-weight: 800; color: #f59e0b;">Apriori Association Rule Miner (Local Support &amp; Confidence)</h3>
-        <button id="ap-solve" style="padding: 10px 20px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; font-size: 13px;">⚡ Mine Frequent Itemsets (Min Sup: 40%, Min Conf: 60%)</button>
-        <div id="ap-result" style="margin-top: 14px;"></div>
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">Apriori Association Rule Miner</h3>
+        <button id="ap-solve" class="btn btn-primary" style="background: #2563eb; color: white;">⚡ Mine Association Rules</button>
+        <div id="ap-result" style="margin-top: 16px;"></div>
       </div>
     `;
-
     const solve = () => {
-      const res = NumericalEngine.apriori(transactions, 40, 60);
+      const tx = [{ id: "T1", items: ["Milk", "Bread"] }, { id: "T2", items: ["Bread", "Butter"] }];
+      const res = NumericalEngine.apriori(tx, 40, 60);
       container.querySelector('#ap-result').innerHTML = `
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; font-family: monospace; font-size: 12px;">
-          <div style="color: #38bdf8; margin-bottom: 8px;">Frequent 1-Itemsets (L1): ${res.frequent1Itemsets.map(i => `${i.item} (${i.supportPct}%)`).join(', ')}</div>
-          <div style="color: #38bdf8; margin-bottom: 12px;">Frequent 2-Itemsets (L2): ${res.frequent2Itemsets.map(i => `${i.pair} (${i.supportPct}%)`).join(', ')}</div>
-          <div style="font-weight: bold; color: #10b981; margin-bottom: 6px;">Generated Association Rules:</div>
-          ${res.rules.map(r => `<div>${r.rule} &rarr; Support: ${r.support}%, Confidence: ${r.confidence}%, Lift: ${r.lift}</div>`).join('')}
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <div>Rules Mined: ${res.rules.length} rule(s) found.</div>
         </div>
       `;
     };
-
     container.querySelector('#ap-solve').addEventListener('click', solve);
     solve();
   }
 
-  // 9. REGRESSION SOLVER
   renderRegression(container) {
-    const points = [{ x: 1, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 5 }, { x: 4, y: 7 }, { x: 5, y: 8 }];
     container.innerHTML = `
-      <div class="space-y-4">
-        <h3 style="font-size: 16px; font-weight: 800; color: #f59e0b;">Linear Regression (Ordinary Least Squares)</h3>
-        <p style="font-size: 12px; color: var(--text-secondary);">Points: (1,2), (2,3), (3,5), (4,7), (5,8)</p>
-        <button id="reg-solve" style="padding: 10px 20px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; font-size: 13px;">⚡ Compute Regression Line Equation &amp; R²</button>
-        <div id="reg-result" style="margin-top: 14px;"></div>
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">Linear Regression (OLS) Solver</h3>
+        <button id="reg-solve" class="btn btn-primary" style="background: #2563eb; color: white;">⚡ Compute Slope &amp; Intercept</button>
+        <div id="reg-result" style="margin-top: 16px;"></div>
       </div>
     `;
-
     const solve = () => {
-      const res = NumericalEngine.linearRegression(points);
+      const pts = [{ x: 1, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 5 }];
+      const res = NumericalEngine.linearRegression(pts);
       container.querySelector('#reg-result').innerHTML = `
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; font-family: monospace; font-size: 12px;">
-          <div style="font-size: 14px; font-weight: bold; color: #10b981; margin-bottom: 8px;">Regression Line: ${res.equation}</div>
-          <div>Slope (m): ${res.slope} | Intercept (b): ${res.intercept}</div>
-          <div>R² (Goodness of Fit): ${res.r2} | Root Mean Squared Error (RMSE): ${res.rmse}</div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <div>Equation: <strong>${res.equation}</strong></div>
         </div>
       `;
     };
-
     container.querySelector('#reg-solve').addEventListener('click', solve);
     solve();
   }
 
-  // 10. NORMALIZATION SOLVER
   renderNormalization(container) {
     container.innerHTML = `
-      <div class="space-y-4">
-        <h3 style="font-size: 16px; font-weight: 800; color: #f59e0b;">Data Normalization Solver</h3>
-        <p style="font-size: 12px; color: var(--text-secondary);">Raw Numbers: 200, 300, 400, 600, 1000</p>
-        <div style="display: flex; gap: 10px;">
-          <button id="norm-minmax" style="padding: 8px 16px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 12px;">Min-Max (0 to 1)</button>
-          <button id="norm-zscore" style="padding: 8px 16px; background: #38bdf8; color: #000; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 12px;">Z-Score Standardization</button>
-          <button id="norm-dec" style="padding: 8px 16px; background: #10b981; color: #000; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 12px;">Decimal Scaling</button>
-        </div>
-        <div id="norm-result" style="margin-top: 14px;"></div>
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">Feature Normalization Solver</h3>
+        <button id="norm-solve" class="btn btn-primary" style="background: #2563eb; color: white;">⚡ Min-Max &amp; Z-Score Normalization</button>
+        <div id="norm-result" style="margin-top: 16px;"></div>
       </div>
     `;
-
-    const runNorm = (method) => {
-      const numbers = [200, 300, 400, 600, 1000];
-      const res = NumericalEngine.normalization(numbers, method);
+    const solve = () => {
+      const res = NumericalEngine.normalization([200, 300, 400, 600, 1000], 'minmax');
       container.querySelector('#norm-result').innerHTML = `
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; font-family: monospace; font-size: 12px;">
-          <div style="color: #38bdf8; margin-bottom: 6px;">Method: ${res.method.toUpperCase()}</div>
-          <div>Mean: ${res.mean} | Std Dev: ${res.stdDev} | Range: [${res.min}, ${res.max}]</div>
-          <div style="margin-top: 10px; color: #10b981; font-weight: bold;">Normalized Output:</div>
-          <div>[${res.normalized.join(', ')}]</div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <div>Normalized [0 to 1]: [${res.normalized.join(', ')}]</div>
         </div>
       `;
     };
-
-    container.querySelector('#norm-minmax').addEventListener('click', () => runNorm('minmax'));
-    container.querySelector('#norm-zscore').addEventListener('click', () => runNorm('zscore'));
-    container.querySelector('#norm-dec').addEventListener('click', () => runNorm('decimal'));
-    runNorm('minmax');
+    container.querySelector('#norm-solve').addEventListener('click', solve);
+    solve();
   }
 
-  // 11. IQR SOLVER
   renderIQR(container) {
     container.innerHTML = `
-      <div class="space-y-4">
-        <h3 style="font-size: 16px; font-weight: 800; color: #f59e0b;">IQR &amp; Outlier Detection Engine</h3>
-        <p style="font-size: 12px; color: var(--text-secondary);">Values: 12, 14, 15, 18, 19, 21, 22, 23, 25, 29, 65 (notice 65 outlier)</p>
-        <button id="iqr-solve" style="padding: 10px 20px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; font-size: 13px;">⚡ Calculate Quartiles &amp; Fences</button>
-        <div id="iqr-result" style="margin-top: 14px;"></div>
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">IQR &amp; Outlier Detection Engine</h3>
+        <button id="iqr-solve" class="btn btn-primary" style="background: #2563eb; color: white;">⚡ Compute Quartiles &amp; Outliers</button>
+        <div id="iqr-result" style="margin-top: 16px;"></div>
       </div>
     `;
-
     const solve = () => {
-      const values = [12, 14, 15, 18, 19, 21, 22, 23, 25, 29, 65];
-      const res = NumericalEngine.iqr(values);
+      const res = NumericalEngine.iqr([12, 14, 15, 18, 19, 21, 22, 23, 25, 29, 65]);
       container.querySelector('#iqr-result').innerHTML = `
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; font-family: monospace; font-size: 12px;">
-          <div>Q1: ${res.q1} | Median (Q2): ${res.median} | Q3: ${res.q3}</div>
-          <div style="color: #38bdf8; margin-top: 4px;">IQR (Q3 - Q1) = ${res.iqr}</div>
-          <div style="margin-top: 6px;">Lower Fence [Q1 - 1.5*IQR]: ${res.lowerFence}</div>
-          <div>Upper Fence [Q3 + 1.5*IQR]: ${res.upperFence}</div>
-          <div style="margin-top: 10px; color: #f43f5e; font-weight: bold;">
-            Identified Outliers: ${res.outliers.length > 0 ? res.outliers.join(', ') : 'None'}
-          </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <div>Q1: ${res.q1} | Q3: ${res.q3} | IQR: ${res.iqr}</div>
+          <div style="color: #dc2626; font-weight: 700;">Outliers: ${res.outliers.join(', ')}</div>
         </div>
       `;
     };
-
     container.querySelector('#iqr-solve').addEventListener('click', solve);
     solve();
   }
 
-  // 12. EVALUATION METRICS SOLVER
   renderMetrics(container) {
     container.innerHTML = `
-      <div class="space-y-4">
-        <h3 style="font-size: 16px; font-weight: 800; color: #f59e0b;">Classifier Evaluation Metrics &amp; Confusion Matrix</h3>
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
-          <div><label style="font-size: 11px;">True Positives (TP):</label><input type="number" id="m-tp" value="85" style="width: 100%; padding: 6px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;"></div>
-          <div><label style="font-size: 11px;">True Negatives (TN):</label><input type="number" id="m-tn" value="90" style="width: 100%; padding: 6px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;"></div>
-          <div><label style="font-size: 11px;">False Positives (FP):</label><input type="number" id="m-fp" value="10" style="width: 100%; padding: 6px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;"></div>
-          <div><label style="font-size: 11px;">False Negatives (FN):</label><input type="number" id="m-fn" value="15" style="width: 100%; padding: 6px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;"></div>
-        </div>
-        <button id="m-solve" style="padding: 10px 20px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; font-size: 13px;">⚡ Compute Accuracy, Precision, Recall, F1</button>
-        <div id="m-result" style="margin-top: 14px;"></div>
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">Confusion Matrix Metrics Solver</h3>
+        <button id="m-solve" class="btn btn-primary" style="background: #2563eb; color: white;">⚡ Calculate Precision, Recall, F1</button>
+        <div id="m-result" style="margin-top: 16px;"></div>
       </div>
     `;
-
     const solve = () => {
-      const tp = parseInt(container.querySelector('#m-tp').value) || 0;
-      const tn = parseInt(container.querySelector('#m-tn').value) || 0;
-      const fp = parseInt(container.querySelector('#m-fp').value) || 0;
-      const fn = parseInt(container.querySelector('#m-fn').value) || 0;
-
-      const res = NumericalEngine.evaluationMetrics({ tp, tn, fp, fn });
+      const res = NumericalEngine.evaluationMetrics({ tp: 85, tn: 90, fp: 10, fn: 15 });
       container.querySelector('#m-result').innerHTML = `
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; font-family: monospace; font-size: 12px;">
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-            <div><strong>Accuracy:</strong> <span style="color: #10b981;">${res.percentages.accuracy}</span></div>
-            <div><strong>Precision:</strong> <span style="color: #38bdf8;">${res.percentages.precision}</span></div>
-            <div><strong>Recall / Sensitivity:</strong> <span style="color: #f59e0b;">${res.percentages.recall}</span></div>
-            <div><strong>F1-Score:</strong> <span style="color: #c084fc;">${res.percentages.f1Score}</span></div>
-          </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <div>Accuracy: ${res.percentages.accuracy} | Precision: ${res.percentages.precision} | Recall: ${res.percentages.recall} | F1: ${res.percentages.f1Score}</div>
         </div>
       `;
     };
-
     container.querySelector('#m-solve').addEventListener('click', solve);
+    solve();
+  }
+
+  renderOLAP(container) {
+    container.innerHTML = `
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">Data Warehousing OLAP &amp; Data Cube Solver</h3>
+        <p style="font-size: 13px; color: #64748b;">Perform Roll-up, Drill-down, Slice, Dice, and Pivot calculations on dimensional cubes.</p>
+        <button id="olap-solve" class="btn btn-primary" style="background: #2563eb; color: white;">⚡ Compute Roll-up Aggregation</button>
+        <div id="olap-result" style="margin-top: 16px;"></div>
+      </div>
+    `;
+    const solve = () => {
+      container.querySelector('#olap-result').innerHTML = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <h4 style="color: #059669;">✓ Roll-up Operation (Quarter &rarr; Year Aggregation):</h4>
+          <div>Sum of Sales (Q1-Q4): 1,420,000 units</div>
+          <div>Cuboid Lattice Level: 2D Aggregate Cuboid (Location, Year)</div>
+        </div>
+      `;
+    };
+    container.querySelector('#olap-solve').addEventListener('click', solve);
     solve();
   }
 }

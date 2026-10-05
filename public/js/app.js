@@ -874,11 +874,11 @@ function renderDashboardView(container) {
             </div>
             <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Numerical Solver</h4>
             <p style="color: #64748b; font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;">
-              Upload a question and get a step-by-step solution.
+              Upload any numerical question and get a step-by-step solution.
             </p>
           </div>
-          <a href="#/numerical-solver" class="btn btn-outline" style="width: 100%; text-align: center; display: block; border-color: #cbd5e1; color: #334155; font-size: 0.88rem; font-weight: 600; text-decoration: none;">
-            Solve Now &rarr;
+          <a href="#/numerical-solver" class="btn btn-primary" style="width: 100%; text-align: center; display: block; background: #2563eb; color: white; font-size: 0.88rem; font-weight: 700; text-decoration: none; padding: 10px; border-radius: 8px;">
+            📤 Upload Question
           </a>
         </div>
 
