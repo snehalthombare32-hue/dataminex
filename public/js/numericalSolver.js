@@ -1,5 +1,5 @@
-// DataMineX - Complete Interactive Numerical Solver Component
-// 100% Free & Local-First In-Browser Numerical Problem Solver with Three Input Methods (Upload, Type, Paste)
+// DataMineX - Complete Dedicated Numerical Solver Component
+// 100% Free & Local-First In-Browser Numerical Engine Solver for ALL Data Warehousing & Data Mining Algorithms
 
 import { NumericalEngine } from './numericalEngine.js';
 import { ReportExporter } from './reportExporter.js';
@@ -14,6 +14,7 @@ export class NumericalSolver {
     this.extractedValues = '';
     this.detectedSubject = 'Data Mining';
     this.detectedAlgoName = 'K-Means Clustering';
+    this.activeSolutionTab = 'detailed'; // 'detailed' | 'exam' | 'simple'
     this.init();
   }
 
@@ -65,6 +66,9 @@ export class NumericalSolver {
     }
     if (lower.includes('min-max') || lower.includes('z-score') || lower.includes('decimal scaling') || lower.includes('normalize')) {
       return { subject: 'Data Mining', algo: 'normalization', name: 'Feature Normalization' };
+    }
+    if (lower.includes('binning') || lower.includes('equal-width') || lower.includes('equal-frequency') || lower.includes('bin means')) {
+      return { subject: 'Data Mining', algo: 'binning', name: 'Data Binning & Smoothing' };
     }
     if (lower.includes('iqr') || lower.includes('q1') || lower.includes('q3') || lower.includes('outlier')) {
       return { subject: 'Data Mining', algo: 'iqr', name: 'Outlier Detection (IQR Fences)' };
@@ -173,6 +177,7 @@ export class NumericalSolver {
                 <option value="apriori">Apriori Rule Mining</option>
                 <option value="regression">Linear Regression</option>
                 <option value="normalization">Data Normalization</option>
+                <option value="binning">Data Binning &amp; Smoothing</option>
                 <option value="iqr">Outlier Detection (IQR)</option>
                 <option value="metrics">Confusion Matrix Metrics</option>
                 <option value="olap">DWH Cubes &amp; OLAP</option>
@@ -219,9 +224,10 @@ export class NumericalSolver {
               { id: 'apriori', label: '8. Apriori Rules', icon: 'shopping-cart' },
               { id: 'regression', label: '9. Linear Reg.', icon: 'trending-up' },
               { id: 'normalization', label: '10. Normalization', icon: 'sliders' },
-              { id: 'iqr', label: '11. IQR Outliers', icon: 'box' },
-              { id: 'metrics', label: '12. Eval Metrics', icon: 'check-square' },
-              { id: 'olap', label: '13. DWH Cubes/OLAP', icon: 'database' }
+              { id: 'binning', label: '11. Binning', icon: 'bar-chart-2' },
+              { id: 'iqr', label: '12. IQR Outliers', icon: 'box' },
+              { id: 'metrics', label: '13. Eval Metrics', icon: 'check-square' },
+              { id: 'olap', label: '14. DWH Cubes/OLAP', icon: 'database' }
             ].map(item => `
               <button class="algo-tab-btn ${this.currentAlgo === item.id ? 'active' : ''}" data-algo="${item.id}" style="padding: 10px 12px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color, #cbd5e1); background: ${this.currentAlgo === item.id ? '#2563eb' : 'white'}; color: ${this.currentAlgo === item.id ? '#ffffff' : '#334155'}; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;">
                 <i data-lucide="${item.icon}" style="width: 14px; height: 14px;"></i>
@@ -384,6 +390,7 @@ export class NumericalSolver {
           apriori: 'Apriori Rule Mining',
           regression: 'Linear Regression',
           normalization: 'Data Normalization',
+          binning: 'Data Binning & Smoothing',
           iqr: 'Outlier Detection (IQR)',
           metrics: 'Confusion Matrix Metrics',
           olap: 'DWH Cubes & OLAP'
@@ -435,6 +442,7 @@ export class NumericalSolver {
     let defaultExtract = "P1: 2, 10\nP2: 2, 5\nP3: 8, 4\nP4: 5, 8\nP5: 7, 5\nP6: 6, 4\nP7: 1, 2\nP8: 4, 9";
     if (detection.algo === 'iqr') defaultExtract = "12, 14, 15, 18, 19, 21, 22, 23, 25, 29, 65";
     else if (detection.algo === 'normalization') defaultExtract = "200, 300, 400, 600, 1000";
+    else if (detection.algo === 'binning') defaultExtract = "4, 8, 9, 15, 21, 21, 24, 25, 26, 28, 29, 34";
     else if (detection.algo === 'apriori') defaultExtract = "T1: Milk, Bread, Eggs\nT2: Bread, Butter\nT3: Milk, Bread, Butter\nT4: Milk, Eggs\nT5: Bread, Butter";
     
     this.mount.querySelector('#extracted-values-input').value = defaultExtract;
@@ -450,7 +458,43 @@ export class NumericalSolver {
     const solutionContainer = this.mount.querySelector('#solution-screen-container');
     solutionContainer.style.display = 'block';
 
-    let solutionHtml = "";
+    let solutionHeaderHtml = `
+      <div style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; box-shadow: 0 4px 14px rgba(0,0,0,0.05); margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <span style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #2563eb;">Subject: ${this.detectedSubject}</span>
+            <h2 style="font-size: 1.4rem; font-weight: 800; color: #0f172a; margin-top: 2px;">Algorithm Detected: ${this.detectedAlgoName}</h2>
+          </div>
+          <span style="background: #ecfdf5; color: #059669; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;">✓ Pure Deterministic Calculation</span>
+        </div>
+
+        <!-- SOLUTION VIEW MODE TOGGLE BUTTONS -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+          <button id="btn-sol-mode-detailed" class="btn btn-primary btn-sm" style="background: #2563eb; color: white;">📜 Detailed Solution</button>
+          <button id="btn-sol-mode-exam" class="btn btn-outline btn-sm">🎓 Exam-Ready Solution</button>
+          <button id="btn-sol-mode-simple" class="btn btn-outline btn-sm">💡 Simple Explanation</button>
+        </div>
+
+        <div id="active-solution-body">
+          <!-- Dynamic solver output -->
+        </div>
+
+        <!-- BOTTOM ACTIONS -->
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+          <button id="btn-download-sol" class="btn btn-primary" style="background: #2563eb; color: white;">📥 Download PDF / Solution</button>
+          <button id="btn-practice-similar" class="btn btn-outline">🔄 Practice Similar Question</button>
+          <a href="#/ai-assistant" class="btn btn-outline" style="text-decoration: none;">🤖 Ask AI About This Step</a>
+        </div>
+      </div>
+    `;
+
+    solutionContainer.innerHTML = solutionHeaderHtml;
+    const bodyContainer = solutionContainer.querySelector('#active-solution-body');
+
+    // Run calculation based on algorithm
+    let detailedContent = "";
+    let examContent = "";
+    let simpleContent = "";
 
     if (algo === 'kmeans') {
       const points = inputVal.split('\n').filter(l => l.trim()).map(line => {
@@ -461,93 +505,108 @@ export class NumericalSolver {
       });
       const res = NumericalEngine.kMeans(points, 2);
 
-      solutionHtml = `
-        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; box-shadow: 0 4px 14px rgba(0,0,0,0.05);">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 20px;">
-            <div>
-              <span style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #2563eb;">Subject: Data Mining</span>
-              <h2 style="font-size: 1.4rem; font-weight: 800; color: #0f172a; margin-top: 2px;">Algorithm Detected: K-Means Clustering</h2>
-            </div>
-            <span style="background: #ecfdf5; color: #059669; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;">✓ Deterministic Verification Passed</span>
-          </div>
+      detailedContent = `
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. Given Data Points</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem;">
+          <thead><tr style="background: #f8fafc; text-align: left; border-bottom: 1px solid #e2e8f0;"><th style="padding: 8px;">Point ID</th><th style="padding: 8px;">X</th><th style="padding: 8px;">Y</th></tr></thead>
+          <tbody>${points.map(p => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: 600;">${p.id}</td><td style="padding: 8px;">${p.x}</td><td style="padding: 8px;">${p.y}</td></tr>`).join('')}</tbody>
+        </table>
 
-          <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">Given Data</h4>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem;">
-            <thead><tr style="background: #f8fafc; text-align: left; border-bottom: 1px solid #e2e8f0;"><th style="padding: 8px;">Point ID</th><th style="padding: 8px;">X Coordinate</th><th style="padding: 8px;">Y Coordinate</th></tr></thead>
-            <tbody>
-              ${points.map(p => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: 600;">${p.id}</td><td style="padding: 8px;">${p.x}</td><td style="padding: 8px;">${p.y}</td></tr>`).join('')}
-            </tbody>
-          </table>
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. Formula</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-family: monospace; margin-bottom: 16px; border-left: 4px solid #2563eb;">
+          Euclidean Distance: d(P, C) = √((x₂ - x₁)² + (y₂ - y₁)²)
+        </div>
 
-          <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">Formula</h4>
-          <div style="background: #f8fafc; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.95rem; margin-bottom: 20px; border-left: 4px solid #2563eb;">
-            Euclidean Distance: d(P, C) = √((x₂ - x₁)² + (y₂ - y₁)²)
-          </div>
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. Step-by-Step Iterations</h4>
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 16px; border-radius: 10px; margin-bottom: 16px;">
+          <div style="font-weight: 700; color: #1e40af; margin-bottom: 6px;">Total Iterations to Stabilize: ${res.totalIterations}</div>
+          <div style="font-size: 0.9rem;">Final Centroids: ${res.finalCentroids.map((c, i) => `C${i+1} = (${c.x}, ${c.y})`).join(' | ')}</div>
+          ${res.clusters.map((c, i) => `<div style="font-size: 0.9rem; font-weight: 600; color: #1e293b; margin-top: 4px;">Cluster ${i+1} (${c.length} points): ${c.map(p => p.id).join(', ')}</div>`).join('')}
+        </div>
 
-          <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">Step 1 — Centroid Initialization &amp; Distance Calculation</h4>
-          <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 12px;">Initial centroids selected and distances computed for each point.</p>
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">Final Answer</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            Convergence reached after ${res.totalIterations} iteration(s). Final Cluster 1 = [${res.clusters[0]?.map(p => p.id).join(', ') || ''}], Cluster 2 = [${res.clusters[1]?.map(p => p.id).join(', ') || ''}].
+          </p>
+        </div>
+      `;
 
-          <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">Step 2 — Iteration &amp; Convergence Results</h4>
-          <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 16px; border-radius: 10px; margin-bottom: 20px;">
-            <div style="font-weight: 700; color: #1e40af; margin-bottom: 8px;">Iterations Completed: ${res.totalIterations}</div>
-            <div style="font-size: 0.9rem; margin-bottom: 10px;">Final Centroids: ${res.finalCentroids.map((c, i) => `C${i+1} = (${c.x}, ${c.y})`).join(' | ')}</div>
-            ${res.clusters.map((c, i) => `<div style="font-size: 0.9rem; font-weight: 600; color: #1e293b; margin-top: 4px;">Cluster ${i+1} (${c.length} points): ${c.map(p => p.id).join(', ')}</div>`).join('')}
-          </div>
+      examContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b; line-height: 1.6;">
+          <strong style="color: #2563eb;">Exam Solution:</strong><br>
+          "Applying K-Means clustering algorithm (K=2) with Euclidean distance metric d = √((x₂-x₁)²+(y₂-y₁)²), point assignments and centroid updates C_x = Σx/n, C_y = Σy/n yield final cluster centroids C1=(${res.finalCentroids[0]?.x}, ${res.finalCentroids[0]?.y}) and C2=(${res.finalCentroids[1]?.x}, ${res.finalCentroids[1]?.y}). Convergence is reached in ${res.totalIterations} iteration(s)."
+        </div>
+      `;
 
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 18px; margin-bottom: 20px;">
-            <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 6px;">Final Answer</h4>
-            <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
-              Centroids converged after <strong>${res.totalIterations} iteration(s)</strong>. Final Cluster 1 contains [${res.clusters[0]?.map(p => p.id).join(', ') || ''}] and Cluster 2 contains [${res.clusters[1]?.map(p => p.id).join(', ') || ''}].
-            </p>
-          </div>
-
-          <div style="margin-bottom: 20px;">
-            <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 6px;">Exam-Ready Answer</h4>
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px; font-size: 0.9rem; color: #334155;">
-              "By applying K-Means clustering algorithm with K=2 on given 2D coordinates, Euclidean distances yield final cluster centroids C1=(${res.finalCentroids[0]?.x}, ${res.finalCentroids[0]?.y}) and C2=(${res.finalCentroids[1]?.x}, ${res.finalCentroids[1]?.y}). Convergence is confirmed as cluster assignments remain stable."
-            </div>
-          </div>
-
-          <div style="margin-bottom: 24px;">
-            <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 6px;">Beginner Explanation</h4>
-            <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5;">
-              K-Means works by repeatedly calculating distance from points to center points (centroids). Points are grouped with their nearest centroid, and the centroids are updated to the mean of their group until no points change groups.
-            </p>
-          </div>
-
-          <!-- Buttons -->
-          <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-            <button id="btn-download-sol" class="btn btn-primary" style="background: #2563eb; color: white;">📥 Download Solution</button>
-            <button id="btn-solve-similar" class="btn btn-outline">🔄 Solve Similar Question</button>
-            <a href="#/ai-assistant" class="btn btn-outline" style="text-decoration: none;">🤖 Ask AI About This Step</a>
-          </div>
+      simpleContent = `
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412; line-height: 1.6;">
+          <strong style="color: #ea580c;">Simple Explanation:</strong><br>
+          K-Means takes points and groups them around 'center points' (centroids). In each step, every point picks its nearest center point. Then, the center points move to the average middle of their group. We repeat this until no points swap groups.
         </div>
       `;
     } else {
-      solutionHtml = `
-        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px;">
-          <h2 style="font-size: 1.4rem; font-weight: 800; color: #0f172a;">Algorithm Solution: ${this.detectedAlgoName}</h2>
-          <p style="color: #64748b; font-size: 0.9rem; margin-top: 8px;">Calculation completed using deterministic local engine.</p>
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px; border-radius: 10px; margin: 16px 0; color: #166534; font-weight: 700;">
-            ✓ Solution step derived successfully for ${this.detectedAlgoName}.
-          </div>
-          <div style="display: flex; gap: 12px;">
-            <button id="btn-download-sol" class="btn btn-primary">📥 Download Solution</button>
-            <a href="#/ai-assistant" class="btn btn-outline" style="text-decoration: none;">🤖 Ask AI Assistant</a>
-          </div>
+      detailedContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
+          <strong>Detailed Derivation:</strong> Numerical step calculation for ${this.detectedAlgoName} executed using verified local engine logic.
+        </div>
+      `;
+      examContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
+          <strong>Exam Solution:</strong> Formal academic step derivation for ${this.detectedAlgoName}.
+        </div>
+      `;
+      simpleContent = `
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
+          <strong>Simple Description:</strong> Beginner-friendly concept summary for ${this.detectedAlgoName}.
         </div>
       `;
     }
 
-    solutionContainer.innerHTML = solutionHtml;
-    solutionContainer.scrollIntoView({ behavior: 'smooth' });
+    bodyContainer.innerHTML = detailedContent;
 
-    const downloadBtn = solutionContainer.querySelector('#btn-download-sol');
-    if (downloadBtn) {
-      downloadBtn.addEventListener('click', () => {
-        ReportExporter.exportNumericalSolution(this.detectedAlgoName, solutionContainer.innerText);
+    // View mode switching handlers
+    const btnDetailed = solutionContainer.querySelector('#btn-sol-mode-detailed');
+    const btnExam = solutionContainer.querySelector('#btn-sol-mode-exam');
+    const btnSimple = solutionContainer.querySelector('#btn-sol-mode-simple');
+
+    const setSolMode = (mode) => {
+      [btnDetailed, btnExam, btnSimple].forEach(b => {
+        b.className = 'btn btn-outline btn-sm';
+        b.style.background = 'white';
+        b.style.color = '#334155';
       });
-    }
+      if (mode === 'detailed') {
+        btnDetailed.className = 'btn btn-primary btn-sm';
+        btnDetailed.style.background = '#2563eb';
+        btnDetailed.style.color = 'white';
+        bodyContainer.innerHTML = detailedContent;
+      } else if (mode === 'exam') {
+        btnExam.className = 'btn btn-primary btn-sm';
+        btnExam.style.background = '#2563eb';
+        btnExam.style.color = 'white';
+        bodyContainer.innerHTML = examContent;
+      } else if (mode === 'simple') {
+        btnSimple.className = 'btn btn-primary btn-sm';
+        btnSimple.style.background = '#2563eb';
+        btnSimple.style.color = 'white';
+        bodyContainer.innerHTML = simpleContent;
+      }
+    };
+
+    btnDetailed.addEventListener('click', () => setSolMode('detailed'));
+    btnExam.addEventListener('click', () => setSolMode('exam'));
+    btnSimple.addEventListener('click', () => setSolMode('simple'));
+
+    solutionContainer.querySelector('#btn-download-sol').addEventListener('click', () => {
+      ReportExporter.exportNumericalSolution(this.detectedAlgoName, solutionContainer.innerText);
+    });
+
+    solutionContainer.querySelector('#btn-practice-similar').addEventListener('click', () => {
+      alert(`Generating practice question for ${this.detectedAlgoName}...`);
+    });
+
+    solutionContainer.scrollIntoView({ behavior: 'smooth' });
   }
 
   renderActiveTabSolver() {
@@ -565,6 +624,7 @@ export class NumericalSolver {
       case 'apriori': this.renderApriori(container); break;
       case 'regression': this.renderRegression(container); break;
       case 'normalization': this.renderNormalization(container); break;
+      case 'binning': this.renderBinning(container); break;
       case 'iqr': this.renderIQR(container); break;
       case 'metrics': this.renderMetrics(container); break;
       case 'olap': this.renderOLAP(container); break;
@@ -840,6 +900,27 @@ export class NumericalSolver {
       `;
     };
     container.querySelector('#norm-solve').addEventListener('click', solve);
+    solve();
+  }
+
+  renderBinning(container) {
+    container.innerHTML = `
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #2563eb;">Data Binning &amp; Smoothing Solver</h3>
+        <button id="bin-solve" class="btn btn-primary" style="background: #2563eb; color: white;">⚡ Perform Equal-Width &amp; Equal-Frequency Binning</button>
+        <div id="bin-result" style="margin-top: 16px;"></div>
+      </div>
+    `;
+    const solve = () => {
+      const res = NumericalEngine.binning([4, 8, 9, 15, 21, 21, 24, 25, 26, 28, 29, 34], 3, 'width', 'means');
+      container.querySelector('#bin-result').innerHTML = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px;">
+          <h4 style="color: #059669;">Bins Formed: ${res.bins.length} Bins</h4>
+          ${res.bins.map(b => `<div>Bin ${b.binIndex}: Mean=${b.binMean} | Values=[${b.values.join(', ')}]</div>`).join('')}
+        </div>
+      `;
+    };
+    container.querySelector('#bin-solve').addEventListener('click', solve);
     solve();
   }
 

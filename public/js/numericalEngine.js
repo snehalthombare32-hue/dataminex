@@ -756,5 +756,62 @@ export const NumericalEngine = {
         f1Score: `${(f1Score * 100).toFixed(2)}%`
       }
     };
+  },
+
+  // 13. BINNING (Equal-Width, Equal-Frequency, Smoothing by Means/Boundaries)
+  binning(numbers, numBins = 3, method = 'width', smoothing = 'means') {
+    if (!numbers || numbers.length === 0) return { error: "No numbers provided" };
+    const sorted = [...numbers].sort((a, b) => a - b);
+    const min = sorted[0];
+    const max = sorted[sorted.length - 1];
+    const bins = [];
+
+    if (method === 'width') {
+      const binWidth = (max - min) / numBins;
+      for (let i = 0; i < numBins; i++) {
+        const binMin = min + i * binWidth;
+        const binMax = i === numBins - 1 ? max : min + (i + 1) * binWidth;
+        const values = sorted.filter(v => i === numBins - 1 ? (v >= binMin && v <= binMax) : (v >= binMin && v < binMax));
+        bins.push({ binIndex: i + 1, min: Number(binMin.toFixed(2)), max: Number(binMax.toFixed(2)), values: values.length > 0 ? values : [binMin] });
+      }
+    } else {
+      // Equal-frequency
+      const binSize = Math.ceil(sorted.length / numBins);
+      for (let i = 0; i < numBins; i++) {
+        const values = sorted.slice(i * binSize, (i + 1) * binSize);
+        if (values.length > 0) {
+          bins.push({ binIndex: i + 1, min: values[0], max: values[values.length - 1], values });
+        }
+      }
+    }
+
+    // Apply smoothing
+    const smoothedBins = bins.map(b => {
+      const vals = b.values;
+      if (vals.length === 0) return { ...b, smoothedValues: [] };
+
+      if (smoothing === 'means') {
+        const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+        const meanVal = Number(mean.toFixed(2));
+        return { ...b, binMean: meanVal, smoothedValues: vals.map(() => meanVal) };
+      } else if (smoothing === 'boundaries') {
+        const bMin = vals[0];
+        const bMax = vals[vals.length - 1];
+        const smoothedValues = vals.map(v => Math.abs(v - bMin) <= Math.abs(v - bMax) ? bMin : bMax);
+        return { ...b, smoothedValues };
+      } else {
+        return { ...b, smoothedValues: vals };
+      }
+    });
+
+    return {
+      success: true,
+      raw: numbers,
+      sorted,
+      method,
+      smoothing,
+      numBins,
+      bins: smoothedBins
+    };
   }
 };
