@@ -94,9 +94,14 @@ const videoData = {
 };
 
 export class VirtualVideoPlayer {
-  constructor(videoType, containerSelector) {
-    this.type = videoData[videoType] ? videoType : 'etl';
-    this.meta = videoData[this.type];
+  constructor(videoType, containerSelector, customVideoUrl = null) {
+    this.type = videoType;
+    this.customVideoUrl = customVideoUrl;
+    this.meta = videoData[videoType] || {
+      title: "Interactive Lecture & Walkthrough",
+      duration: 60,
+      captions: [{ start: 0, end: 60, text: "Interactive animated demonstration loaded." }]
+    };
     this.container = document.querySelector(containerSelector);
     
     this.isPlaying = false;
@@ -109,6 +114,33 @@ export class VirtualVideoPlayer {
   
   initPlayer() {
     if (!this.container) return;
+
+    // Check if an unconfigured video was requested
+    if (!videoData[this.type] && !this.customVideoUrl) {
+      this.container.innerHTML = `
+        <div class="video-player-container animate-fade-in" style="padding: 30px; text-align: center; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px;">
+          <div style="font-size: 40px; margin-bottom: 12px;">🎬</div>
+          <h3 style="font-size: 18px; font-weight: 800; color: #f59e0b; margin-bottom: 8px;">Demo Video Coming Soon</h3>
+          <p style="font-size: 13px; color: var(--text-secondary); max-width: 500px; margin: 0 auto 16px;">
+            A high-definition free video demonstration is being prepared for this topic. You can use our built-in animated canvas whiteboard or load any local MP4 educational file.
+          </p>
+          <div style="display: flex; justify-content: center; gap: 10px;">
+            <button id="btn-load-fallback-whiteboard" style="padding: 8px 16px; background: var(--primary-color); color: #fff; font-size: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer;">
+              Play Interactive Whiteboard Lecture
+            </button>
+          </div>
+        </div>
+      `;
+      const fbBtn = this.container.querySelector('#btn-load-fallback-whiteboard');
+      if (fbBtn) {
+        fbBtn.addEventListener('click', () => {
+          this.type = 'etl';
+          this.meta = videoData.etl;
+          this.initPlayer();
+        });
+      }
+      return;
+    }
     
     this.container.innerHTML = `
       <div class="video-player-container">

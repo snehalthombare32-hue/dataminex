@@ -12,6 +12,9 @@ import { VirtualVideoPlayer } from './videos.js';
 import { SqlPlayground, ErdSchemaBuilder, AprioriSimulator, BiDashboardBuilder } from './sandboxes.js';
 import { SchemaGenerator } from './schemaGenerator.js';
 import { ClassificationDemo, DataExplorationDemo } from './miningDemos.js';
+import { NumericalSolver } from './numericalSolver.js';
+import { UniversalQuestionSolver } from './universalSolver.js';
+import { AIAssistant } from './aiAssistant.js';
 
 // Application State
 const state = {
@@ -462,6 +465,21 @@ async function router() {
   else if (hash === '#/classification') {
     new ClassificationDemo('#app');
   }
+
+  // 14. Local Deterministic Numerical Solver
+  else if (hash === '#/numerical-solver') {
+    new NumericalSolver('#app');
+  }
+
+  // 15. Universal Question Solver (Free Fallback)
+  else if (hash === '#/universal-solver') {
+    new UniversalQuestionSolver('#app');
+  }
+
+  // 16. Free AI Study Assistant
+  else if (hash === '#/ai-assistant') {
+    new AIAssistant('#app');
+  }
   
   // Refresh Lucide Icons after template draw
   if (window.lucide) {
@@ -489,6 +507,12 @@ function highlightSidebar(hash) {
     matchId = 'nav-data-exploration';
   } else if (hash === '#/classification') {
     matchId = 'nav-classification';
+  } else if (hash === '#/numerical-solver') {
+    matchId = 'nav-numerical-solver';
+  } else if (hash === '#/universal-solver') {
+    matchId = 'nav-universal-solver';
+  } else if (hash === '#/ai-assistant') {
+    matchId = 'nav-ai-assistant';
   } else if (hash === '#/challenges') matchId = 'nav-challenges';
   else if (hash === '#/achievements') matchId = 'nav-achievements';
   else if (hash === '#/progress') matchId = 'nav-progress';
