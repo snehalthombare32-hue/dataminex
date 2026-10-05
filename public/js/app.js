@@ -15,6 +15,11 @@ import { ClassificationDemo, DataExplorationDemo } from './miningDemos.js';
 import { NumericalSolver } from './numericalSolver.js';
 import { UniversalQuestionSolver } from './universalSolver.js';
 import { AIAssistant } from './aiAssistant.js';
+import { PracticalLabHub } from './practicalLab.js';
+import { DemoVideosPage } from './demoVideos.js';
+import { NotesManager } from './notes.js';
+import { ResourcesManager } from './resources.js';
+import { ReportExporter } from './reportExporter.js';
 
 // Application State
 const state = {
@@ -480,6 +485,26 @@ async function router() {
   else if (hash === '#/ai-assistant') {
     new AIAssistant('#app');
   }
+
+  // 17. Practical Lab Hub
+  else if (hash === '#/practical-lab') {
+    new PracticalLabHub('#app');
+  }
+
+  // 18. Demo Videos Page
+  else if (hash === '#/demo-videos') {
+    new DemoVideosPage('#app');
+  }
+
+  // 19. My Notes Page
+  else if (hash === '#/notes') {
+    new NotesManager('#app');
+  }
+
+  // 20. Resources Page
+  else if (hash === '#/resources') {
+    new ResourcesManager('#app');
+  }
   
   // Refresh Lucide Icons after template draw
   if (window.lucide) {
@@ -492,32 +517,16 @@ function highlightSidebar(hash) {
   
   let matchId = 'nav-dashboard';
   if (hash === '#/dashboard') matchId = 'nav-dashboard';
-  else if (hash === '#/learning-path') matchId = 'nav-learning-path';
-  else if (hash.includes('/warehouse')) {
-    matchId = hash.includes('/demo') ? 'nav-warehouse-demo' : 'nav-warehouse';
-  } else if (hash.includes('/mining')) {
-    matchId = hash.includes('/demo') ? 'nav-mining-demo' : 'nav-mining';
-  } else if (hash.includes('/analytics')) {
-    matchId = hash.includes('/demo') ? 'nav-analytics-demo' : 'nav-analytics';
-  } else if (hash.includes('/lake')) {
-    matchId = 'nav-lake';
-  } else if (hash === '#/schema-generator') {
-    matchId = 'nav-schema-generator';
-  } else if (hash === '#/data-exploration') {
-    matchId = 'nav-data-exploration';
-  } else if (hash === '#/classification') {
-    matchId = 'nav-classification';
-  } else if (hash === '#/numerical-solver') {
-    matchId = 'nav-numerical-solver';
-  } else if (hash === '#/universal-solver') {
-    matchId = 'nav-universal-solver';
-  } else if (hash === '#/ai-assistant') {
-    matchId = 'nav-ai-assistant';
-  } else if (hash === '#/challenges') matchId = 'nav-challenges';
-  else if (hash === '#/achievements') matchId = 'nav-achievements';
+  else if (hash.includes('/warehouse')) matchId = 'nav-warehouse';
+  else if (hash.includes('/mining')) matchId = 'nav-mining';
+  else if (hash === '#/numerical-solver') matchId = 'nav-numerical-solver';
+  else if (hash === '#/practical-lab') matchId = 'nav-practical-lab';
+  else if (hash === '#/demo-videos') matchId = 'nav-demo-videos';
+  else if (hash === '#/ai-assistant') matchId = 'nav-ai-assistant';
   else if (hash === '#/progress') matchId = 'nav-progress';
-  else if (hash === '#/profile') matchId = 'nav-profile';
-  else if (hash === '#/sql-sandbox') matchId = 'nav-sql-sandbox';
+  else if (hash === '#/notes') matchId = 'nav-notes';
+  else if (hash === '#/resources') matchId = 'nav-resources';
+  else if (hash === '#/universal-solver') matchId = 'nav-numerical-solver';
   
   const el = document.getElementById(matchId);
   if (el) el.classList.add('active');
@@ -757,132 +766,287 @@ function renderRegisterView(container) {
 
 function renderDashboardView(container) {
   const p = calculateProgress();
+  const userName = state.user ? state.user.name : 'Snehal';
   
-  // Find current module suggestion
-  let activeModuleId = 'warehouse';
-  let activeModuleTitle = 'Data Warehousing — ETL';
-  let moduleProg = p.warehouse;
-  
-  if (p.warehouse >= 100 && p.mining < 100) {
-    activeModuleId = 'mining';
-    activeModuleTitle = 'Data Mining — Algorithms';
-    moduleProg = p.mining;
-  } else if (p.warehouse >= 100 && p.mining >= 100) {
-    activeModuleId = 'analytics';
-    activeModuleTitle = 'Data Analytics — Visualization';
-    moduleProg = p.analytics;
-  }
-  
+  const lessonsDone = p.details.lessons;
+  const dwhDone = state.progress.filter(x => x.module_id === 'warehouse').length;
+  const miningDone = state.progress.filter(x => x.module_id === 'mining').length;
+  const labDone = p.details.practices;
+  const quizDone = p.details.quizzes;
+
   container.innerHTML = `
-    <div class="welcome-section">
-      <h1 class="welcome-title">Welcome back, ${state.user ? state.user.name : 'Learner'} 👋</h1>
-      <p class="welcome-subtitle">Continue your Data Science journey.</p>
+    <!-- Top Welcome & Dynamic Progress Banner -->
+    <div class="dashboard-top-banner animate-slide-up" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 28px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.3);">
+      
+      <!-- Welcome Section -->
+      <div class="welcome-section" style="display: flex; flex-direction: column; justify-content: center;">
+        <h1 class="welcome-title" style="font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; color: white;">Welcome back, ${userName}! 👋</h1>
+        <p class="welcome-subtitle" style="font-size: 1rem; opacity: 0.95; margin-bottom: 20px;">Continue your learning journey in Data Warehousing & Data Mining.</p>
+        <div>
+          <a href="#/module/warehouse" class="btn" style="background: white; color: #4f46e5; font-weight: 600; padding: 10px 22px; border-radius: 8px; border: none; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px; text-decoration: none;">
+            Explore Now &rarr;
+          </a>
+        </div>
+      </div>
+
+      <!-- Your Learning Progress Card -->
+      <div class="learning-progress-card" style="background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(10px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2); display: flex; flex-direction: column; justify-content: space-between;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="font-size: 1.05rem; font-weight: 600; margin: 0; color: white;">Your Learning Progress</h3>
+          <span style="font-size: 1.5rem; font-weight: 800; color: #a5f3fc;">${p.overall}%</span>
+        </div>
+        
+        <div style="font-size: 0.88rem; font-weight: 600; color: #e0e7ff; margin-bottom: 12px;">
+          ${lessonsDone} / 20 Topics Completed
+        </div>
+
+        <!-- Progress Metrics Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85rem;">
+          <div style="background: rgba(0, 0, 0, 0.15); padding: 8px 12px; border-radius: 6px;">
+            <div style="opacity: 0.8; font-size: 0.75rem;">Data Warehousing</div>
+            <div style="font-weight: 700; font-size: 0.95rem;">${Math.min(10, dwhDone)}/10</div>
+          </div>
+          <div style="background: rgba(0, 0, 0, 0.15); padding: 8px 12px; border-radius: 6px;">
+            <div style="opacity: 0.8; font-size: 0.75rem;">Data Mining</div>
+            <div style="font-weight: 700; font-size: 0.95rem;">${Math.min(10, miningDone)}/10</div>
+          </div>
+          <div style="background: rgba(0, 0, 0, 0.15); padding: 8px 12px; border-radius: 6px;">
+            <div style="opacity: 0.8; font-size: 0.75rem;">Practical Labs</div>
+            <div style="font-weight: 700; font-size: 0.95rem;">${Math.min(5, labDone)}/5</div>
+          </div>
+          <div style="background: rgba(0, 0, 0, 0.15); padding: 8px 12px; border-radius: 6px;">
+            <div style="opacity: 0.8; font-size: 0.75rem;">Quizzes</div>
+            <div style="font-weight: 700; font-size: 0.95rem;">${Math.min(5, quizDone)}/5</div>
+          </div>
+        </div>
+      </div>
     </div>
-    
-    <!-- Continue Learning Section -->
-    <div class="continue-learning-card animate-slide-up">
-      <div class="continue-tag">Continue Learning</div>
-      <h2 class="continue-title">${activeModuleTitle}</h2>
-      
-      <div class="continue-progress">
-        <div class="continue-progress-bar">
-          <div class="continue-progress-fill" style="width: ${moduleProg}%"></div>
+
+    <!-- MAIN SUBJECT SECTION: ONLY 2 LARGE CARDS -->
+    <div style="margin-bottom: 36px;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 16px; color: var(--text-heading, #1e293b);">Core Subjects</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+        
+        <!-- DATA WAREHOUSING CARD -->
+        <div class="card subject-card" style="background: white; border: 1px solid var(--border-color, #e2e8f0); border-radius: 14px; padding: 28px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s, box-shadow 0.2s;">
+          <div>
+            <div style="width: 54px; height: 54px; border-radius: 12px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; font-size: 1.5rem;">
+              <i data-lucide="database"></i>
+            </div>
+            <h3 style="font-size: 1.3rem; font-weight: 700; color: #0f172a; margin-bottom: 10px;">DATA WAREHOUSING</h3>
+            <p style="color: #64748b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 24px;">
+              Learn concepts, explore structured data and perform analytical operations.
+            </p>
+          </div>
+          <a href="#/module/warehouse" class="btn btn-primary" style="background: #2563eb; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; text-align: center; display: block;">
+            Explore Data Warehousing &rarr;
+          </a>
         </div>
-        <span class="continue-progress-text">${moduleProg}%</span>
+
+        <!-- DATA MINING CARD -->
+        <div class="card subject-card" style="background: white; border: 1px solid var(--border-color, #e2e8f0); border-radius: 14px; padding: 28px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s, box-shadow 0.2s;">
+          <div>
+            <div style="width: 54px; height: 54px; border-radius: 12px; background: #faf5ff; color: #9333ea; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; font-size: 1.5rem;">
+              <i data-lucide="sparkles"></i>
+            </div>
+            <h3 style="font-size: 1.3rem; font-weight: 700; color: #0f172a; margin-bottom: 10px;">DATA MINING</h3>
+            <p style="color: #64748b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 24px;">
+              Discover patterns, build models and gain knowledge from data.
+            </p>
+          </div>
+          <a href="#/module/mining" class="btn btn-primary" style="background: #9333ea; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; text-align: center; display: block;">
+            Explore Data Mining &rarr;
+          </a>
+        </div>
       </div>
-      
-      <a href="#/module/${activeModuleId}" class="btn btn-outline" style="background: white; color: var(--color-indigo); border: none;">
-        Continue Learning &rarr;
-      </a>
     </div>
-    
-    <!-- Visual learning path entry card preview -->
-    <div class="path-header">
-      <h2 class="path-section-title">Your Learning Journey</h2>
-      <a href="#/learning-path" class="btn btn-outline btn-sm">Open Full Map</a>
+
+    <!-- QUICK ACCESS SECTION -->
+    <div style="margin-bottom: 36px;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 16px; color: var(--text-heading, #1e293b);">Quick Access</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+        
+        <!-- 1. Numerical Solver -->
+        <div class="card quick-access-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+              <i data-lucide="calculator"></i>
+            </div>
+            <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Numerical Solver</h4>
+            <p style="color: #64748b; font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;">
+              Upload a question and get a step-by-step solution.
+            </p>
+          </div>
+          <a href="#/numerical-solver" class="btn btn-outline" style="width: 100%; text-align: center; display: block; border-color: #cbd5e1; color: #334155; font-size: 0.88rem; font-weight: 600; text-decoration: none;">
+            Solve Now &rarr;
+          </a>
+        </div>
+
+        <!-- 2. Practical Lab -->
+        <div class="card quick-access-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: #fff7ed; color: #ea580c; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+              <i data-lucide="flask-conical"></i>
+            </div>
+            <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Practical Lab</h4>
+            <p style="color: #64748b; font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;">
+              Perform hands-on experiments with datasets.
+            </p>
+          </div>
+          <a href="#/practical-lab" class="btn btn-outline" style="width: 100%; text-align: center; display: block; border-color: #cbd5e1; color: #334155; font-size: 0.88rem; font-weight: 600; text-decoration: none;">
+            Start Practicing &rarr;
+          </a>
+        </div>
+
+        <!-- 3. Demo Videos -->
+        <div class="card quick-access-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: #fef2f2; color: #dc2626; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+              <i data-lucide="play-circle"></i>
+            </div>
+            <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Demo Videos</h4>
+            <p style="color: #64748b; font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;">
+              Watch step-by-step demonstrations.
+            </p>
+          </div>
+          <a href="#/demo-videos" class="btn btn-outline" style="width: 100%; text-align: center; display: block; border-color: #cbd5e1; color: #334155; font-size: 0.88rem; font-weight: 600; text-decoration: none;">
+            Watch Videos &rarr;
+          </a>
+        </div>
+
+        <!-- 4. AI Assistant -->
+        <div class="card quick-access-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: #f0f9ff; color: #0284c7; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+              <i data-lucide="bot"></i>
+            </div>
+            <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;">AI Assistant</h4>
+            <p style="color: #64748b; font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;">
+              Ask doubts and get instant explanations.
+            </p>
+          </div>
+          <a href="#/ai-assistant" class="btn btn-outline" style="width: 100%; text-align: center; display: block; border-color: #cbd5e1; color: #334155; font-size: 0.88rem; font-weight: 600; text-decoration: none;">
+            Ask Now &rarr;
+          </a>
+        </div>
+      </div>
     </div>
-    
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-top: 16px;">
-      <!-- Card 1 -->
-      <div class="path-card ${p.warehouse >= 100 ? 'completed' : 'current'}">
-        <div class="path-header">
-          <div class="path-title-group">
-            <span class="path-icon">🏢</span>
-            <h3 class="syllabus-title">Data Warehouse</h3>
-          </div>
-          <span class="path-badge ${p.warehouse >= 100 ? 'badge-completed' : 'badge-current'}">
-            ${p.warehouse >= 100 ? 'COMPLETED' : 'IN PROGRESS'}
-          </span>
-        </div>
-        <p class="path-desc">Study relational dimensional schemas, star/snowflake structures, and guided ETL procedures.</p>
-        <div class="path-stats">
-          <span class="path-stat-item">📚 8 Lessons</span>
-          <span class="path-stat-item">⚡ 1 Demo</span>
-        </div>
-        <div class="path-progress-container">
-          <div class="path-progress-bar">
-            <div class="path-progress-fill" style="width: ${p.warehouse}%"></div>
-          </div>
-          <span class="path-progress-percent">${p.warehouse}%</span>
-        </div>
-        <a href="#/module/warehouse" class="btn btn-primary btn-block" style="margin-top: 8px;">Explore Module</a>
-      </div>
+
+    <!-- CONTINUE LEARNING & RECENT ACTIVITY GRID -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 36px;">
       
-      <!-- Card 2 -->
-      <div class="path-card ${p.warehouse < 100 ? 'locked' : (p.mining >= 100 ? 'completed' : 'current')}">
-        <div class="path-header">
-          <div class="path-title-group">
-            <span class="path-icon">⛏</span>
-            <h3 class="syllabus-title">Data Mining</h3>
+      <!-- CONTINUE LEARNING -->
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-heading, #1e293b); margin: 0;">Continue Learning</h2>
+          <a href="#/learning-path" style="font-size: 0.88rem; font-weight: 600; color: #2563eb; text-decoration: none;">View All &rarr;</a>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          
+          <!-- Topic Card 1 -->
+          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+            <div style="flex: 1;">
+              <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #2563eb; letter-spacing: 0.5px;">Data Warehousing</span>
+              <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 4px 0 8px;">OLAP Operations</h4>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="flex: 1; max-width: 160px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                  <div style="width: 75%; height: 100%; background: #2563eb;"></div>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">75%</span>
+              </div>
+            </div>
+            <a href="#/olap-visualizer" class="btn btn-primary btn-sm" style="background: #2563eb; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.85rem;">Continue</a>
           </div>
-          <span class="path-badge ${p.warehouse < 100 ? 'badge-locked' : (p.mining >= 100 ? 'badge-completed' : 'badge-current')}">
-            ${p.warehouse < 100 ? 'LOCKED' : (p.mining >= 100 ? 'COMPLETED' : 'START')}
-          </span>
-        </div>
-        <p class="path-desc">Discover frequent market patterns with Apriori, and group coordinate points with K-Means clustering.</p>
-        <div class="path-stats">
-          <span class="path-stat-item">📚 5 Lessons</span>
-          <span class="path-stat-item">⚡ 1 Demo</span>
-        </div>
-        <div class="path-progress-container">
-          <div class="path-progress-bar">
-            <div class="path-progress-fill" style="width: ${p.mining}%"></div>
+
+          <!-- Topic Card 2 -->
+          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+            <div style="flex: 1;">
+              <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #9333ea; letter-spacing: 0.5px;">Data Mining</span>
+              <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 4px 0 8px;">K-Means Clustering</h4>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="flex: 1; max-width: 160px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                  <div style="width: 50%; height: 100%; background: #9333ea;"></div>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">50%</span>
+              </div>
+            </div>
+            <a href="#/numerical-solver" class="btn btn-primary btn-sm" style="background: #9333ea; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.85rem;">Continue</a>
           </div>
-          <span class="path-progress-percent">${p.mining}%</span>
+
+          <!-- Topic Card 3 -->
+          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+            <div style="flex: 1;">
+              <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #9333ea; letter-spacing: 0.5px;">Data Mining</span>
+              <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 4px 0 8px;">Apriori Association Mining</h4>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="flex: 1; max-width: 160px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                  <div style="width: 40%; height: 100%; background: #9333ea;"></div>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">40%</span>
+              </div>
+            </div>
+            <a href="#/module/mining/learn/apriori-algorithm" class="btn btn-primary btn-sm" style="background: #9333ea; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.85rem;">Continue</a>
+          </div>
+
         </div>
-        <a href="#/module/mining" class="btn ${p.warehouse < 100 ? 'btn-outline' : 'btn-primary'} btn-block" style="margin-top: 8px;" ${p.warehouse < 100 ? 'onclick="return false; style=\'pointer-events: none; opacity: 0.5;\'' : ''}>
-          ${p.warehouse < 100 ? 'Locked' : 'Explore Module'}
-        </a>
       </div>
-      
-      <!-- Card 3 -->
-      <div class="path-card ${p.mining < 100 ? 'locked' : (p.analytics >= 100 ? 'completed' : 'current')}">
-        <div class="path-header">
-          <div class="path-title-group">
-            <span class="path-icon">📊</span>
-            <h3 class="syllabus-title">Data Analytics</h3>
+
+      <!-- RECENT ACTIVITY -->
+      <div>
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-heading, #1e293b); margin-bottom: 16px;">Recent Activity</h2>
+        
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 16px;">
+          
+          <div style="display: flex; gap: 12px; align-items: flex-start;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0;">
+              <i data-lucide="check-circle-2"></i>
+            </div>
+            <div>
+              <div style="font-size: 0.88rem; font-weight: 600; color: #0f172a;">Completed Star Schema Lab</div>
+              <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">2 hours ago</div>
+            </div>
           </div>
-          <span class="path-badge ${p.mining < 100 ? 'badge-locked' : (p.analytics >= 100 ? 'badge-completed' : 'badge-current')}">
-            ${p.mining < 100 ? 'LOCKED' : (p.analytics >= 100 ? 'COMPLETED' : 'START')}
-          </span>
-        </div>
-        <p class="path-desc">Inspect diagnostic trend metrics and select proper chart templates to construct executive dashboards.</p>
-        <div class="path-stats">
-          <span class="path-stat-item">📚 4 Lessons</span>
-          <span class="path-stat-item">⚡ 1 Demo</span>
-        </div>
-        <div class="path-progress-container">
-          <div class="path-progress-bar">
-            <div class="path-progress-fill" style="width: ${p.analytics}%"></div>
+
+          <div style="display: flex; gap: 12px; align-items: flex-start;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: #fef2f2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0;">
+              <i data-lucide="play"></i>
+            </div>
+            <div>
+              <div style="font-size: 0.88rem; font-weight: 600; color: #0f172a;">Watched K-Means Demo Video</div>
+              <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Yesterday</div>
+            </div>
           </div>
-          <span class="path-progress-percent">${p.analytics}%</span>
+
+          <div style="display: flex; gap: 12px; align-items: flex-start;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0;">
+              <i data-lucide="calculator"></i>
+            </div>
+            <div>
+              <div style="font-size: 0.88rem; font-weight: 600; color: #0f172a;">Solved Regression Problem</div>
+              <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">2 days ago</div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 12px; align-items: flex-start;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: #faf5ff; color: #9333ea; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0;">
+              <i data-lucide="award"></i>
+            </div>
+            <div>
+              <div style="font-size: 0.88rem; font-weight: 600; color: #0f172a;">Attempted Data Mining Quiz</div>
+              <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">3 days ago</div>
+            </div>
+          </div>
+
         </div>
-        <a href="#/module/analytics" class="btn ${p.mining < 100 ? 'btn-outline' : 'btn-primary'} btn-block" style="margin-top: 8px;" ${p.mining < 100 ? 'onclick="return false; style=\'pointer-events: none; opacity: 0.5;\'' : ''}>
-          ${p.mining < 100 ? 'Locked' : 'Explore Module'}
-        </a>
       </div>
+
     </div>
   `;
+  
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
 }
 
 function renderLearningPathView(container) {
