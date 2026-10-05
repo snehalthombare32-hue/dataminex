@@ -454,6 +454,53 @@ export class NumericalSolver {
     verificationStage.scrollIntoView({ behavior: 'smooth' });
   }
 
+  parseInputPoints(inputVal) {
+    if (!inputVal) return [];
+    const lines = inputVal.split('\n').filter(l => l.trim());
+    const points = [];
+    lines.forEach((line, idx) => {
+      const parts = line.split(':');
+      const id = parts.length > 1 ? parts[0].trim() : `P${idx + 1}`;
+      const rest = parts.length > 1 ? parts[1] : parts[0];
+      const nums = rest.match(/-?\d+(\.\d+)?/g);
+      if (nums && nums.length >= 2) {
+        points.push({ id, x: parseFloat(nums[0]), y: parseFloat(nums[1]) });
+      }
+    });
+    if (points.length === 0) {
+      const allNums = (inputVal.match(/-?\d+(\.\d+)?/g) || []).map(Number);
+      for (let i = 0; i < allNums.length - 1; i += 2) {
+        points.push({ id: `P${Math.floor(i / 2) + 1}`, x: allNums[i], y: allNums[i + 1] });
+      }
+    }
+    return points;
+  }
+
+  parseInputNumbers(inputVal) {
+    if (!inputVal) return [12, 14, 15, 18, 19, 21, 22, 23, 25, 29, 65];
+    const nums = (inputVal.match(/-?\d+(\.\d+)?/g) || []).map(Number);
+    return nums.length > 0 ? nums : [12, 14, 15, 18, 19, 21, 22, 23, 25, 29, 65];
+  }
+
+  parseInputXYSeries(inputVal) {
+    const xMatch = inputVal.match(/X\s*[:=]\s*([^\n;]+)/i);
+    const yMatch = inputVal.match(/Y\s*[:=]\s*([^\n;]+)/i);
+    if (xMatch && yMatch) {
+      const xs = (xMatch[1].match(/-?\d+(\.\d+)?/g) || []).map(Number);
+      const ys = (yMatch[1].match(/-?\d+(\.\d+)?/g) || []).map(Number);
+      const points = [];
+      const len = Math.min(xs.length, ys.length);
+      for (let i = 0; i < len; i++) {
+        points.push({ id: `P${i + 1}`, x: xs[i], y: ys[i] });
+      }
+      if (points.length > 0) return { xs, ys, points };
+    }
+    const points = this.parseInputPoints(inputVal);
+    const xs = points.map(p => p.x);
+    const ys = points.map(p => p.y);
+    return { xs, ys, points };
+  }
+
   runAcademicSolution(algo, inputVal) {
     const solutionContainer = this.mount.querySelector('#solution-screen-container');
     solutionContainer.style.display = 'block';
@@ -497,59 +544,237 @@ export class NumericalSolver {
 
     // 1. K-MEANS SOLVER DERIVATION
     if (algo === 'kmeans') {
-      const points = inputVal.split('\n').filter(l => l.trim()).map(line => {
-        const parts = line.split(':');
-        const id = parts.length > 1 ? parts[0].trim() : 'P';
-        const coords = (parts.length > 1 ? parts[1] : parts[0]).split(',').map(n => parseFloat(n.trim()));
-        return { id, x: coords[0] || 0, y: coords[1] || 0 };
-      });
-      const res = NumericalEngine.kMeans(points, 2);
+      const points = this.parseInputPoints(inputVal);
+      const pts = points.length > 0 ? points : [
+        {id:'P1',x:2,y:10},{id:'P2',x:2,y:5},{id:'P3',x:8,y:4},{id:'P4',x:5,y:8},{id:'P5',x:7,y:5}
+      ];
+      const res = NumericalEngine.kMeans(pts, 2);
 
       detailedContent = `
-        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. Given Data &amp; Parameters</h4>
-        <div style="font-size: 0.9rem; color: #475569; margin-bottom: 12px;">Number of points: <strong>${points.length}</strong> | Target Clusters (K): <strong>2</strong></div>
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; GIVEN DATA</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px; border: 1px solid #e2e8f0;">
+          <strong>Given Dataset (${pts.length} 2D Points, Target Clusters K=2):</strong><br>
+          ${pts.map(p => `<strong>${p.id}</strong>=(${p.x}, ${p.y})`).join(' | ')}
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. REQUIRED</h4>
+        <p style="font-size: 0.9rem; color: #475569; margin-bottom: 14px;">Compute cluster assignments, distance tables, centroid updates, and check convergence until stable.</p>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. FORMULA &amp; METHOD</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb; line-height: 1.6;">
+          Euclidean Distance Formula: d(P, C) = √((x_p - c_x)² + (y_p - c_y)²)<br>
+          Centroid Shift Formula: C_x = (Σ x_i) / n , C_y = (Σ y_i) / n
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">4. STEP-BY-STEP ITERATION DERIVATIONS</h4>
+        <div style="margin-bottom: 16px;">
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 12px;">
+            <strong style="color: #2563eb;">ITERATION 1: Initial Centroids C1=(${res.history[0]?.centroids[0]?.x ?? pts[0]?.x}, ${res.history[0]?.centroids[0]?.y ?? pts[0]?.y}), C2=(${res.history[0]?.centroids[1]?.x ?? pts[1]?.x}, ${res.history[0]?.centroids[1]?.y ?? pts[1]?.y})</strong>
+            <div style="font-size: 0.88rem; margin-top: 8px; line-height: 1.6;">
+              ${pts.map(p => {
+                const c1 = res.history[0]?.centroids[0] || pts[0];
+                const c2 = res.history[0]?.centroids[1] || pts[1];
+                const d1 = Math.hypot(p.x - c1.x, p.y - c1.y).toFixed(3);
+                const d2 = Math.hypot(p.x - c2.x, p.y - c2.y).toFixed(3);
+                const assigned = Number(d1) <= Number(d2) ? 'Cluster 1' : 'Cluster 2';
+                return `d(${p.id}, C1) = √((${p.x}-${c1.x})² + (${p.y}-${c1.y})²) = ${d1} | d(${p.id}, C2) = √((${p.x}-${c2.x})² + (${p.y}-${c2.y})²) = ${d2} ➔ <strong>Assigned to ${assigned}</strong><br>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">5. CONVERGENCE &amp; FINAL CLUSTER TABLE</h4>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem;">
-          <thead><tr style="background: #f8fafc; text-align: left; border-bottom: 1px solid #e2e8f0;"><th style="padding: 8px;">Point</th><th style="padding: 8px;">X Coordinate</th><th style="padding: 8px;">Y Coordinate</th></tr></thead>
-          <tbody>${points.map(p => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: 600;">${p.id}</td><td style="padding: 8px;">${p.x}</td><td style="padding: 8px;">${p.y}</td></tr>`).join('')}</tbody>
+          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; text-align: left;"><th style="padding: 8px;">Cluster</th><th style="padding: 8px;">Points Assigned</th><th style="padding: 8px;">Final Centroid (Cx, Cy)</th></tr></thead>
+          <tbody>
+            ${res.clusters.map((c, i) => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: bold; color: #2563eb;">Cluster ${i+1}</td><td style="padding: 8px;">${c.map(p => p.id).join(', ')}</td><td style="padding: 8px; font-weight: bold;">(${res.finalCentroids[i]?.x}, ${res.finalCentroids[i]?.y})</td></tr>`).join('')}
+          </tbody>
         </table>
 
-        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. Distance &amp; Centroid Update Formulas</h4>
-        <div style="background: #f8fafc; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; margin-bottom: 16px; border-left: 4px solid #2563eb; line-height: 1.6;">
-          Euclidean Distance: d(P, C) = √((x₂ - x₁)² + (y₂ - y₁)²)<br>
-          New Centroid Coordinates: C_x = (Σ x) / n , C_y = (Σ y) / n
-        </div>
-
-        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. Step-by-Step Iteration Arithmetic</h4>
-        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 16px; border-radius: 10px; margin-bottom: 16px;">
-          <div style="font-weight: 700; color: #1e40af; margin-bottom: 6px;">Total Iterations to Stabilize: ${res.totalIterations}</div>
-          <div style="font-size: 0.9rem;">Final Centroids: ${res.finalCentroids.map((c, i) => `C${i+1} = (${c.x}, ${c.y})`).join(' | ')}</div>
-          ${res.clusters.map((c, i) => `<div style="font-size: 0.9rem; font-weight: 600; color: #1e293b; margin-top: 4px;">Cluster ${i+1} (${c.length} points): ${c.map(p => p.id).join(', ')}</div>`).join('')}
-        </div>
-
         <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
-          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">Final Answer</h4>
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
           <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
-            Centroids converged after <strong>${res.totalIterations} iteration(s)</strong>. Cluster 1 = [${res.clusters[0]?.map(p => p.id).join(', ') || ''}], Cluster 2 = [${res.clusters[1]?.map(p => p.id).join(', ') || ''}].
+            K-Means algorithm converged after <strong>${res.totalIterations} iteration(s)</strong>.<br>
+            <strong>Cluster 1:</strong> [${res.clusters[0]?.map(p => p.id).join(', ') || ''}] with Centroid C1 = (${res.finalCentroids[0]?.x}, ${res.finalCentroids[0]?.y})<br>
+            <strong>Cluster 2:</strong> [${res.clusters[1]?.map(p => p.id).join(', ') || ''}] with Centroid C2 = (${res.finalCentroids[1]?.x}, ${res.finalCentroids[1]?.y})
           </p>
         </div>
       `;
 
       examContent = `
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b; line-height: 1.6;">
-          <strong style="color: #2563eb;">Exam-Ready Answer:</strong><br>
-          "Applying K-Means clustering algorithm (K=2) with Euclidean distance metric d = √((x₂-x₁)²+(y₂-y₁)²), point assignments and centroid updates C_x = Σx/n, C_y = Σy/n yield final cluster centroids C1=(${res.finalCentroids[0]?.x}, ${res.finalCentroids[0]?.y}) and C2=(${res.finalCentroids[1]?.x}, ${res.finalCentroids[1]?.y}). Convergence is confirmed in ${res.totalIterations} iteration(s)."
+          <strong style="color: #2563eb;">Exam-Ready Solution:</strong><br>
+          1. Formula: Euclidean Distance d(P, C) = √((x₂-x₁)²+(y₂-y₁)²), Centroid Update C_x = Σx/n, C_y = Σy/n.<br>
+          2. Iteration Result: Converged in ${res.totalIterations} iterations.<br>
+          3. Final Centroids: C1=(${res.finalCentroids[0]?.x}, ${res.finalCentroids[0]?.y}), C2=(${res.finalCentroids[1]?.x}, ${res.finalCentroids[1]?.y}).<br>
+          4. Cluster Partition: Cluster 1 = [${res.clusters[0]?.map(p => p.id).join(', ') || ''}], Cluster 2 = [${res.clusters[1]?.map(p => p.id).join(', ') || ''}].
         </div>
       `;
 
       simpleContent = `
-        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412; line-height: 1.6;">
-          <strong style="color: #ea580c;">Simple Explanation:</strong><br>
-          K-Means picks center points (centroids). Each point finds its closest center point and joins that group. Then, the center points shift to the average middle of their group. This repeats until no points change groups.
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
+          <strong>Simple Explanation:</strong> K-Means groups nearby 2D coordinate points around central pivot points called centroids until no point changes group.
         </div>
       `;
     }
 
-    // 2. ID3 DECISION TREE SOLVER DERIVATION
+    // 2. K-MEDOIDS SOLVER DERIVATION
+    else if (algo === 'kmedoids') {
+      const points = this.parseInputPoints(inputVal);
+      const pts = points.length >= 2 ? points : [
+        {id:'P1',x:2,y:6},{id:'P2',x:3,y:4},{id:'P3',x:3,y:8},{id:'P4',x:4,y:7},{id:'P5',x:6,y:2}
+      ];
+      const res = NumericalEngine.kMedoids(pts, 2);
+
+      detailedContent = `
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; GIVEN DATA</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          Given Points: ${pts.map(p => `${p.id}(${p.x}, ${p.y})`).join(' | ')} | K = 2 Medoids
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. FORMULA &amp; COST METHOD</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb;">
+          Distance Metric: d(P, M) = √((x_p - x_m)² + (y_p - y_m)²)<br>
+          Total Dissimilarity Cost: E = Σ d(P_i, M_assigned)
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. STEP-BY-STEP MEDOID SWAP EVALUATION</h4>
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 16px; font-family: monospace; font-size: 0.88rem;">
+          Initial Selected Medoids: M1 = ${res.finalMedoids[0]?.id || pts[0].id}, M2 = ${res.finalMedoids[1]?.id || pts[1].id}<br>
+          Total Dissimilarity Cost E = ${res.totalCost}<br>
+          Iterative Swap Check: Candidate non-medoid points tested for lower total cost.
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            Optimal Medoids selected: <strong>${res.finalMedoids.map(m => m.id).join(' and ')}</strong><br>
+            Minimum Cost E = <strong>${res.totalCost}</strong>
+          </p>
+        </div>
+      `;
+
+      examContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
+          <strong>Exam-Ready Answer:</strong> "PAM (K-Medoids) algorithm evaluated candidate medoid swaps using dissimilarity cost E = Σ min d(P, M). Final medoids chosen: ${res.finalMedoids.map(m => m.id).join(', ')} with minimum total dissimilarity cost = ${res.totalCost}."
+        </div>
+      `;
+
+      simpleContent = `
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
+          <strong>Simple Explanation:</strong> K-Medoids picks actual data points as group leaders (medoids) instead of abstract average points.
+        </div>
+      `;
+    }
+
+    // 3. HIERARCHICAL SOLVER DERIVATION
+    else if (algo === 'hierarchical') {
+      const points = this.parseInputPoints(inputVal);
+      const pts = points.length >= 2 ? points : [
+        {id:'P1',x:1,y:1},{id:'P2',x:1.5,y:1.5},{id:'P3',x:5,y:5},{id:'P4',x:3,y:4}
+      ];
+      const res = NumericalEngine.hierarchicalClustering(pts, 'single');
+
+      detailedContent = `
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; GIVEN DATA</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          Points (${pts.length}): ${pts.map(p => `${p.id}(${p.x}, ${p.y})`).join(' | ')} | Linkage: Single Linkage (Min Pair Distance)
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. FORMULA &amp; LINKAGE METHOD</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb;">
+          Euclidean Distance: d(A, B) = √((x_a - x_b)² + (y_a - y_b)²)<br>
+          Single Linkage Merge Criteria: d(C1, C2) = min { d(p1, p2) | p1 ∈ C1, p2 ∈ C2 }
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. STEP-BY-STEP CLUSTER MERGE DERIVATIONS</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem;">
+          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; text-align: left;"><th style="padding: 8px;">Step</th><th style="padding: 8px;">Clusters Merged</th><th style="padding: 8px;">Selected Minimum Distance</th><th style="padding: 8px;">Resulting Cluster</th></tr></thead>
+          <tbody>
+            ${res.steps.map(s => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: bold;">Step ${s.step}</td><td style="padding: 8px; color: #2563eb; font-weight: 600;">${s.clusterA} + ${s.clusterB}</td><td style="padding: 8px;">d = ${s.distance}</td><td style="padding: 8px; font-weight: bold;">${s.mergedLabel}</td></tr>`).join('')}
+          </tbody>
+        </table>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            Full Agglomerative Dendrogram hierarchy constructed in ${res.steps.length} merge steps.<br>
+            Root Cluster: <strong>${res.finalTree.label}</strong>
+          </p>
+        </div>
+      `;
+
+      examContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
+          <strong>Exam-Ready Answer:</strong> "Agglomerative hierarchical clustering with single linkage merged nearest clusters sequentially. Final merge sequence: ${res.steps.map(s => `Step ${s.step}: ${s.mergedLabel} (d=${s.distance})`).join(' ➔ ')}."
+        </div>
+      `;
+
+      simpleContent = `
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
+          <strong>Simple Explanation:</strong> Hierarchical clustering starts with every point in its own group and repeatedly merges the two closest groups until all points form a tree structure (dendrogram).
+        </div>
+      `;
+    }
+
+    // 4. DBSCAN SOLVER DERIVATION
+    else if (algo === 'dbscan') {
+      const points = this.parseInputPoints(inputVal);
+      const pts = points.length >= 2 ? points : [
+        {id:'P1',x:2,y:10},{id:'P2',x:2,y:9},{id:'P3',x:8,y:4},{id:'P4',x:8,y:5},{id:'P5',x:25,y:30}
+      ];
+      const res = NumericalEngine.dbscan(pts, 3, 2);
+
+      detailedContent = `
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; GIVEN PARAMETERS</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          Dataset: ${pts.length} points | Epsilon (ε) = 3.0 | MinPts = 2
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. DENSITY RULES &amp; CLASSIFICATION FORMULA</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb;">
+          ε-Neighborhood: N_ε(P) = { Q ∈ D | d(P, Q) ≤ ε }<br>
+          Core Point: |N_ε(P)| ≥ MinPts<br>
+          Border Point: |N_ε(P)| &lt; MinPts BUT in N_ε(Core)<br>
+          Noise Point: Neither Core nor Border Point
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. POINT CLASSIFICATION &amp; CLUSTER EXPANSION TABLE</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem;">
+          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; text-align: left;"><th style="padding: 8px;">Point</th><th style="padding: 8px;">Coordinates</th><th style="padding: 8px;">Classification</th></tr></thead>
+          <tbody>
+            ${pts.map(p => {
+              const pKey = p.id || `${p.x}_${p.y}`;
+              const type = res.pointTypes[pKey] || 'noise';
+              const badgeColor = type === 'core' ? '#059669' : (type === 'border' ? '#d97706' : '#dc2626');
+              return `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: bold;">${p.id}</td><td style="padding: 8px;">(${p.x}, ${p.y})</td><td style="padding: 8px; font-weight: bold; color: ${badgeColor};">${type.toUpperCase()}</td></tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            DBSCAN identified <strong>${res.totalClusters} cluster(s)</strong>.<br>
+            Noise Outlier Points: <strong>${res.noise.map(p => p.id).join(', ') || 'None'}</strong>
+          </p>
+        </div>
+      `;
+
+      examContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
+          <strong>Exam-Ready Answer:</strong> "Evaluating ε-neighborhoods (ε=3.0, MinPts=2), core points expand density clusters while isolated points are labeled noise. Total clusters = ${res.totalClusters}, Noise points = ${res.noise.map(p => p.id).join(', ') || 'None'}."
+        </div>
+      `;
+
+      simpleContent = `
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
+          <strong>Simple Explanation:</strong> DBSCAN finds dense groups of points that are close to each other while automatically flagging sparse isolated points as noise.
+        </div>
+      `;
+    }
+
+    // 5. ID3 SOLVER DERIVATION
     else if (algo === 'id3') {
       const data = [
         { Outlook: "Sunny", Humidity: "High", Play: "No" },
@@ -564,42 +789,155 @@ export class NumericalSolver {
       const res = NumericalEngine.id3Entropy(data, 'Play');
 
       detailedContent = `
-        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. System Shannon Entropy Formula</h4>
-        <div style="background: #f8fafc; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; margin-bottom: 16px; border-left: 4px solid #2563eb; line-height: 1.6;">
-          Entropy(S) = - p(+) log₂ p(+) - p(-) log₂ p(-)<br>
-          System Entropy H(S) = ${res.systemEntropy} bits
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; GIVEN DATASET</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          Training Samples: ${data.length} tuples | Target Class Attribute: <strong>Play</strong>
         </div>
 
-        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. Information Gain Comparison Table</h4>
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. SHANNON ENTROPY &amp; INFORMATION GAIN FORMULAS</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb;">
+          System Entropy: H(S) = - Σ p_i log₂ (p_i)<br>
+          Expected Entropy: H(S, A) = Σ (|S_v| / |S|) × H(S_v)<br>
+          Information Gain: Gain(S, A) = H(S) - H(S, A)<br>
+          Calculated System Entropy H(S) = <strong>${res.systemEntropy} bits</strong>
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. ATTRIBUTE INFORMATION GAIN DERIVATIONS</h4>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem;">
-          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: left;"><th style="padding: 8px;">Attribute</th><th style="padding: 8px;">Expected Entropy H(S, A)</th><th style="padding: 8px;">Information Gain Gain(S, A)</th></tr></thead>
+          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; text-align: left;"><th style="padding: 8px;">Candidate Attribute</th><th style="padding: 8px;">Expected Entropy H(S, A)</th><th style="padding: 8px;">Information Gain Gain(S, A)</th></tr></thead>
           <tbody>
-            ${res.gains.map(g => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: 700;">${g.attribute}</td><td style="padding: 8px;">${g.expectedEntropy}</td><td style="padding: 8px; color: #059669; font-weight: bold;">${g.informationGain}</td></tr>`).join('')}
+            ${res.gains.map(g => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: bold; color: #2563eb;">${g.attribute}</td><td style="padding: 8px;">${g.expectedEntropy} bits</td><td style="padding: 8px; font-weight: bold; color: #059669;">${g.informationGain} bits</td></tr>`).join('')}
           </tbody>
         </table>
 
         <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
-          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">Root Selection Result</h4>
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
           <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
-            Root attribute chosen: <strong>${res.bestSplitAttribute}</strong> (Highest Information Gain = ${res.highestGain}).
+            Attribute <strong>${res.bestSplitAttribute}</strong> yields the highest Information Gain (Gain = ${res.highestGain} bits).<br>
+            Therefore, <strong>${res.bestSplitAttribute}</strong> is selected as the Root Node of the Decision Tree.
           </p>
         </div>
       `;
 
       examContent = `
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
-          <strong>Exam-Ready Answer:</strong> "Given dataset entropy H(S) = ${res.systemEntropy}, calculating expected entropy for candidate attributes yields highest Information Gain for '${res.bestSplitAttribute}' (Gain = ${res.highestGain}). Therefore, '${res.bestSplitAttribute}' is selected as the decision tree root node."
+          <strong>Exam-Ready Answer:</strong> "With system entropy H(S) = ${res.systemEntropy}, calculating expected entropy H(S,A) and Information Gain Gain(S,A) = H(S) - H(S,A) identifies '${res.bestSplitAttribute}' with maximum Gain = ${res.highestGain}. Root Node = '${res.bestSplitAttribute}'."
         </div>
       `;
 
       simpleContent = `
         <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
-          <strong>Simple Explanation:</strong> ID3 measures disorder (entropy). It tests every feature to see which feature provides the clearest prediction. The feature with the highest information gain becomes the root.
+          <strong>Simple Explanation:</strong> ID3 selects the feature that removes the most uncertainty (highest information gain) to make the decision tree as clean and accurate as possible.
         </div>
       `;
     }
 
-    // 3. APRIORI SOLVER DERIVATION
+    // 6. NAIVE BAYES SOLVER DERIVATION
+    else if (algo === 'naivebayes') {
+      const data = [
+        { Outlook: "Sunny", Humidity: "High", Play: "No" },
+        { Outlook: "Sunny", Humidity: "High", Play: "No" },
+        { Outlook: "Overcast", Humidity: "High", Play: "Yes" },
+        { Outlook: "Rain", Humidity: "High", Play: "Yes" },
+        { Outlook: "Rain", Humidity: "Normal", Play: "Yes" }
+      ];
+      const res = NumericalEngine.naiveBayes(data, 'Play', { Outlook: 'Sunny', Humidity: 'High' });
+
+      detailedContent = `
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; TEST INSTANCE</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          Test Query: X = (Outlook=Sunny, Humidity=High) | Target Classes: Yes / No
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. BAYES THEOREM &amp; LAPLACE FORMULAS</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb;">
+          Class Prior: P(C_k) = Count(C_k) / Total<br>
+          Laplace Likelihood: P(X_i | C_k) = (Count(X_i, C_k) + 1) / (Count(C_k) + |V|)<br>
+          Posterior: P(C_k | X) ∝ P(C_k) × ∏ P(X_i | C_k)
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. POSTERIOR PROBABILITY COMPUTATION</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem;">
+          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; text-align: left;"><th style="padding: 8px;">Class (Ck)</th><th style="padding: 8px;">Prior P(Ck)</th><th style="padding: 8px;">Normalized Posterior Probability</th></tr></thead>
+          <tbody>
+            ${res.classes.map(c => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: bold; color: #2563eb;">${c}</td><td style="padding: 8px;">${res.classPriors[c]?.prior.toFixed(3)}</td><td style="padding: 8px; font-weight: bold; color: #059669;">${(res.posteriors[c] * 100).toFixed(1)}%</td></tr>`).join('')}
+          </tbody>
+        </table>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            Predicted Class: <strong>${res.predictedClass}</strong> (Confidence = ${res.confidence})
+          </p>
+        </div>
+      `;
+
+      examContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
+          <strong>Exam-Ready Answer:</strong> "Applying Naive Bayes classification with Laplace smoothing P(C_k|X) ∝ P(C_k) ∏ P(x_i|C_k) yields maximum posterior probability for Class '${res.predictedClass}' (${res.confidence})."
+        </div>
+      `;
+
+      simpleContent = `
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
+          <strong>Simple Explanation:</strong> Naive Bayes calculates past probability occurrences for each feature independently and multiplies them to predict the most probable outcome.
+        </div>
+      `;
+    }
+
+    // 7. KNN SOLVER DERIVATION
+    else if (algo === 'knn') {
+      const points = this.parseInputPoints(inputVal);
+      const train = points.length >= 3 ? points.map(p => ({ ...p, label: p.id.startsWith('R') ? 'Red' : 'Blue' })) : [
+        { x: 1, y: 2, label: "Red", id: "P1" },
+        { x: 2, y: 3, label: "Red", id: "P2" },
+        { x: 6, y: 5, label: "Blue", id: "P3" },
+        { x: 7, y: 8, label: "Blue", id: "P4" }
+      ];
+      const testPoint = { x: 3, y: 3 };
+      const res = NumericalEngine.knn(train, testPoint, 3);
+
+      detailedContent = `
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; GIVEN PARAMETERS</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          Test Point: T(${testPoint.x}, ${testPoint.y}) | K = 3 Nearest Neighbors | Distance Metric: Euclidean
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. EUCLIDEAN DISTANCE DERIVATION FORMULA</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb;">
+          d(P_i, T) = √((x_i - x_t)² + (y_i - y_t)²)
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. DISTANCE CALCULATIONS TO EVERY TRAINING POINT</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem;">
+          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; text-align: left;"><th style="padding: 8px;">Rank</th><th style="padding: 8px;">Point</th><th style="padding: 8px;">Class Label</th><th style="padding: 8px;">Euclidean Distance Calculation</th><th style="padding: 8px;">In Top K?</th></tr></thead>
+          <tbody>
+            ${res.neighbors.map((n, i) => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: bold;">Rank ${i+1}</td><td style="padding: 8px;">(${n.x}, ${n.y})</td><td style="padding: 8px; font-weight: bold; color: #2563eb;">${n.label || n.class || 'Class 1'}</td><td style="padding: 8px; font-family: monospace;">√((${n.x}-3)² + (${n.y}-3)²) = ${n.distance}</td><td style="padding: 8px; font-weight: bold; color: #059669;">✓ YES</td></tr>`).join('')}
+          </tbody>
+        </table>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            Majority Voting Result: <strong>${res.predictedClass}</strong> (Vote Confidence = ${res.confidence})
+          </p>
+        </div>
+      `;
+
+      examContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
+          <strong>Exam-Ready Answer:</strong> "Calculated Euclidean distances d = √((x_i-x_t)²+(y_i-y_t)²) from test point T(3,3) to all training samples. Selecting K=3 nearest neighbors yields majority class vote = '${res.predictedClass}' (${res.confidence})."
+        </div>
+      `;
+
+      simpleContent = `
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
+          <strong>Simple Explanation:</strong> KNN finds the closest K neighbors in space to a new point and assigns the label held by the majority of those neighbors.
+        </div>
+      `;
+    }
+
+    // 8. APRIORI SOLVER DERIVATION
     else if (algo === 'apriori') {
       const tx = [
         { id: "T1", items: ["Milk", "Bread", "Eggs"] },
@@ -611,53 +949,356 @@ export class NumericalSolver {
       const res = NumericalEngine.apriori(tx, 40, 60);
 
       detailedContent = `
-        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. Support &amp; Confidence Formulas</h4>
-        <div style="background: #f8fafc; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; margin-bottom: 16px; border-left: 4px solid #2563eb; line-height: 1.6;">
-          Support(X) = Count(X) / N<br>
-          Confidence(X ➔ Y) = Support(X ∪ Y) / Support(X)<br>
-          Lift(X ➔ Y) = Confidence(X ➔ Y) / Support(Y)
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; PARAMETERS</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          Transactions: ${tx.length} | Min Support Threshold = 40% | Min Confidence Threshold = 60%
         </div>
 
-        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. Association Rules Mined</h4>
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. SUPPORT &amp; CONFIDENCE FORMULAS</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb;">
+          Support(X) = (Count(X) / N) × 100%<br>
+          Confidence(A ➔ B) = (Support(A ∪ B) / Support(A)) × 100%<br>
+          Lift(A ➔ B) = Confidence(A ➔ B) / Support(B)
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. MINED ASSOCIATION RULES</h4>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem;">
-          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: left;"><th style="padding: 8px;">Rule</th><th style="padding: 8px;">Support %</th><th style="padding: 8px;">Confidence %</th><th style="padding: 8px;">Lift</th></tr></thead>
+          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; text-align: left;"><th style="padding: 8px;">Association Rule</th><th style="padding: 8px;">Support %</th><th style="padding: 8px;">Confidence %</th><th style="padding: 8px;">Lift Metric</th></tr></thead>
           <tbody>
-            ${res.rules.map(r => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: 700; color: #2563eb;">${r.rule}</td><td style="padding: 8px;">${r.support}%</td><td style="padding: 8px; color: #059669; font-weight: bold;">${r.confidence}%</td><td style="padding: 8px;">${r.lift}</td></tr>`).join('')}
+            ${res.rules.map(r => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: bold; color: #2563eb;">${r.rule}</td><td style="padding: 8px;">${r.support}%</td><td style="padding: 8px; font-weight: bold; color: #059669;">${r.confidence}%</td><td style="padding: 8px;">${r.lift}</td></tr>`).join('')}
           </tbody>
         </table>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            Apriori algorithm generated <strong>${res.rules.length} valid rule(s)</strong> satisfying min_sup ≥ 40% and min_conf ≥ 60%.
+          </p>
+        </div>
       `;
 
       examContent = `
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
-          <strong>Exam-Ready Answer:</strong> "Frequent itemsets generated with Min Support = 40% and Min Confidence = 60% yield ${res.rules.length} valid association rules. Top rule: ${res.rules[0]?.rule || 'Rule 1'} with Support = ${res.rules[0]?.support || 40}% and Confidence = ${res.rules[0]?.confidence || 60}%."
+          <strong>Exam-Ready Answer:</strong> "Frequent itemsets C1➔L1, C2➔L2 derived with min_sup=40% and min_conf=60%. Mined ${res.rules.length} strong rules. Top rule: ${res.rules[0]?.rule || 'Rule 1'} (Support=${res.rules[0]?.support || 40}%, Confidence=${res.rules[0]?.confidence || 60}%)."
         </div>
       `;
 
       simpleContent = `
         <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
-          <strong>Simple Explanation:</strong> Apriori finds items frequently bought together in store transactions and calculates confidence rules.
+          <strong>Simple Explanation:</strong> Apriori scans customer shopping carts to find items that are frequently bought together and builds recommendation rules.
         </div>
       `;
     }
 
-    // 4. GENERAL ENGINE FALLBACK
-    else {
+    // 9. LINEAR REGRESSION SOLVER DERIVATION
+    else if (algo === 'regression') {
+      const { xs, ys, points } = this.parseInputXYSeries(inputVal);
+      const pts = points.length >= 2 ? points : [
+        { id: "P1", x: 10, y: 15 },
+        { id: "P2", x: 20, y: 25 },
+        { id: "P3", x: 30, y: 35 },
+        { id: "P4", x: 40, y: 50 }
+      ];
+      const res = NumericalEngine.linearRegression(pts);
+
+      const sumX = pts.reduce((a, b) => a + b.x, 0);
+      const sumY = pts.reduce((a, b) => a + b.y, 0);
+      const sumX2 = pts.reduce((a, b) => a + b.x * b.x, 0);
+      const sumY2 = pts.reduce((a, b) => a + b.y * b.y, 0);
+      const sumXY = pts.reduce((a, b) => a + b.x * b.y, 0);
+      const n = pts.length;
+
       detailedContent = `
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b; line-height: 1.6;">
-          <h4 style="color: #2563eb; margin-bottom: 8px;">Board Derivation for ${this.detectedAlgoName}</h4>
-          <p>Calculation completed step-by-step using deterministic engine rules without skipping arithmetic steps.</p>
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; GIVEN DATA</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          X = [${pts.map(p => p.x).join(', ')}]<br>
+          Y = [${pts.map(p => p.y).join(', ')}]<br>
+          Observations count (n) = ${n}
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. REQUIRED</h4>
+        <p style="font-size: 0.9rem; color: #475569; margin-bottom: 14px;">Find Ordinary Least Squares (OLS) Slope b, Intercept a, and Regression Line Y = a + bX.</p>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. FORMULAS</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb; line-height: 1.6;">
+          Slope b = (n Σ XY - Σ X Σ Y) / (n Σ X² - (Σ X)²)<br>
+          Intercept a = (Σ Y - b Σ X) / n = Ȳ - b X̄
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">4. SUMMARY CALCULATION TABLE</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem;">
+          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; text-align: left;"><th style="padding: 8px;">i</th><th style="padding: 8px;">X</th><th style="padding: 8px;">Y</th><th style="padding: 8px;">X²</th><th style="padding: 8px;">Y²</th><th style="padding: 8px;">XY</th></tr></thead>
+          <tbody>
+            ${pts.map((p, i) => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: bold;">${i+1}</td><td style="padding: 8px;">${p.x}</td><td style="padding: 8px;">${p.y}</td><td style="padding: 8px;">${p.x * p.x}</td><td style="padding: 8px;">${p.y * p.y}</td><td style="padding: 8px;">${p.x * p.y}</td></tr>`).join('')}
+            <tr style="background: #eff6ff; font-weight: bold; border-top: 2px solid #2563eb;"><td style="padding: 8px;">Σ (SUM)</td><td style="padding: 8px;">${sumX}</td><td style="padding: 8px;">${sumY}</td><td style="padding: 8px;">${sumX2}</td><td style="padding: 8px;">${sumY2}</td><td style="padding: 8px;">${sumXY}</td></tr>
+          </tbody>
+        </table>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">5. STEP-BY-STEP ARITHMETIC SUBSTITUTION</h4>
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 16px; font-family: monospace; font-size: 0.88rem; line-height: 1.8;">
+          1. Slope b numerator = (${n} × ${sumXY}) - (${sumX} × ${sumY}) = ${n * sumXY} - ${sumX * sumY} = <strong>${n * sumXY - sumX * sumY}</strong><br>
+          2. Slope b denominator = (${n} × ${sumX2}) - (${sumX}²) = ${n * sumX2} - ${sumX * sumX} = <strong>${n * sumX2 - sumX * sumX}</strong><br>
+          3. Slope b = ${n * sumXY - sumX * sumY} / ${n * sumX2 - sumX * sumX} = <strong>${res.slope}</strong><br>
+          4. Intercept a = (${sumY} - (${res.slope} × ${sumX})) / ${n} = (${sumY} - ${(res.slope * sumX).toFixed(2)}) / ${n} = <strong>${res.intercept}</strong>
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            Linear Regression Equation: <strong>${res.equation}</strong><br>
+            Slope (b) = <strong>${res.slope}</strong> | Intercept (a) = <strong>${res.intercept}</strong> | R² = <strong>${res.r2}</strong>
+          </p>
         </div>
       `;
 
       examContent = `
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
-          <strong>Exam-Ready Answer:</strong> Academic solution step derived for ${this.detectedAlgoName}.
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b; line-height: 1.6;">
+          <strong>Exam-Ready Solution:</strong><br>
+          1. Given: n=${n}, ΣX=${sumX}, ΣY=${sumY}, ΣX²=${sumX2}, ΣXY=${sumXY}.<br>
+          2. Slope b = (nΣXY - ΣXΣY) / (nΣX² - (ΣX)²) = ${res.slope}.<br>
+          3. Intercept a = (ΣY - bΣX) / n = ${res.intercept}.<br>
+          4. Final Regression Equation: Y = ${res.slope}X ${res.intercept >= 0 ? '+ ' + res.intercept : '- ' + Math.abs(res.intercept)}.
         </div>
       `;
 
       simpleContent = `
         <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
-          <strong>Simple Description:</strong> Concept breakdown for ${this.detectedAlgoName}.
+          <strong>Simple Explanation:</strong> Linear regression draws the single best straight trendline through data points so you can predict Y for any new X value.
+        </div>
+      `;
+    }
+
+    // 10. NORMALIZATION SOLVER DERIVATION
+    else if (algo === 'normalization') {
+      const numbers = this.parseInputNumbers(inputVal);
+      const resMM = NumericalEngine.normalization(numbers, 'minmax');
+      const resZS = NumericalEngine.normalization(numbers, 'zscore');
+      const resDS = NumericalEngine.normalization(numbers, 'decimal');
+
+      detailedContent = `
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; GIVEN VALUES</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          Original Values: [${numbers.join(', ')}] | Count (n) = ${numbers.length}<br>
+          Min = ${resMM.min} | Max = ${resMM.max} | Mean (μ) = ${resZS.mean} | StdDev (s) = ${resZS.stdDev}
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. FORMULAS</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb; line-height: 1.6;">
+          Min-Max [0, 1]: v' = (v - min) / (max - min)<br>
+          Z-Score: z = (v - μ) / s<br>
+          Decimal Scaling: v' = v / 10^j (where j = ⌈log₁₀(|v|_max)⌉)
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. DERIVATION COMPARISON TABLE FOR ALL VALUES</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem;">
+          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; text-align: left;"><th style="padding: 8px;">Original v</th><th style="padding: 8px;">Min-Max [0, 1]</th><th style="padding: 8px;">Z-Score (z)</th><th style="padding: 8px;">Decimal Scaled</th></tr></thead>
+          <tbody>
+            ${numbers.map((v, i) => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: bold;">${v}</td><td style="padding: 8px; color: #2563eb; font-weight: bold;">${resMM.normalized[i]}</td><td style="padding: 8px; color: #059669; font-weight: bold;">${resZS.normalized[i]}</td><td style="padding: 8px;">${resDS.normalized[i]}</td></tr>`).join('')}
+          </tbody>
+        </table>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            Feature normalizations computed for all ${numbers.length} values. Min-Max maps data strictly into range [0, 1].
+          </p>
+        </div>
+      `;
+
+      examContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
+          <strong>Exam-Ready Answer:</strong> "Applying Min-Max v'=(v-min)/(max-min), Z-Score z=(v-μ)/s (μ=${resZS.mean}, s=${resZS.stdDev}), and Decimal scaling v'=v/10^j scales all observations into standardized ranges."
+        </div>
+      `;
+
+      simpleContent = `
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
+          <strong>Simple Explanation:</strong> Normalization rescales large raw numbers so different features can be compared fairly on the exact same scale.
+        </div>
+      `;
+    }
+
+    // 11. BINNING SOLVER DERIVATION
+    else if (algo === 'binning') {
+      const numbers = this.parseInputNumbers(inputVal);
+      const res = NumericalEngine.binning(numbers, 3, 'width', 'means');
+
+      detailedContent = `
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; PARAMETERS</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          Raw Dataset (${numbers.length} numbers): [${numbers.join(', ')}]<br>
+          Bins = 3 | Method = Equal-Width | Smoothing = Bin Means
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. BINNING FORMULA &amp; DERIVATIONS</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb;">
+          Sorted Dataset: [${res.sorted.join(', ')}]<br>
+          Bin Width W = (Max - Min) / Bins = (${res.sorted[res.sorted.length-1]} - ${res.sorted[0]}) / 3 = <strong>${((res.sorted[res.sorted.length-1] - res.sorted[0]) / 3).toFixed(2)}</strong>
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. BIN ASSIGNMENT &amp; SMOOTHING TABLE</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem;">
+          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; text-align: left;"><th style="padding: 8px;">Bin</th><th style="padding: 8px;">Original Partition Values</th><th style="padding: 8px;">Bin Mean μ</th><th style="padding: 8px;">Smoothed Values</th></tr></thead>
+          <tbody>
+            ${res.bins.map(b => `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: bold; color: #2563eb;">Bin ${b.binIndex}</td><td style="padding: 8px;">[${b.values.join(', ')}]</td><td style="padding: 8px; font-weight: bold;">${b.binMean}</td><td style="padding: 8px; color: #059669; font-weight: bold;">[${b.smoothedValues.join(', ')}]</td></tr>`).join('')}
+          </tbody>
+        </table>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            Data smoothed into 3 equal-width bins using bin means.
+          </p>
+        </div>
+      `;
+
+      examContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
+          <strong>Exam-Ready Answer:</strong> "Sorted data partitioned into 3 equal-width bins of width W=${((res.sorted[res.sorted.length-1]-res.sorted[0])/3).toFixed(2)}. Values in each bin replaced with bin mean μ."
+        </div>
+      `;
+
+      simpleContent = `
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
+          <strong>Simple Explanation:</strong> Binning groups sorted numbers into buckets and replaces noisy values in each bucket with the average of that bucket.
+        </div>
+      `;
+    }
+
+    // 12. IQR SOLVER DERIVATION
+    else if (algo === 'iqr') {
+      const numbers = this.parseInputNumbers(inputVal);
+      const res = NumericalEngine.iqr(numbers);
+
+      detailedContent = `
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; GIVEN DATASET</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          Original Dataset (${numbers.length} values): [${numbers.join(', ')}]<br>
+          Sorted Dataset: [${res.sorted.join(', ')}]
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. QUARTILE &amp; OUTLIER FENCE FORMULAS</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb; line-height: 1.6;">
+          Q1 (25th Percentile) = ${res.q1} | Q2 (Median) = ${res.median} | Q3 (75th Percentile) = ${res.q3}<br>
+          IQR = Q3 - Q1 = ${res.q3} - ${res.q1} = <strong>${res.iqr}</strong><br>
+          Lower Fence = Q1 - 1.5 × IQR = ${res.q1} - 1.5(${res.iqr}) = <strong>${res.lowerFence}</strong><br>
+          Upper Fence = Q3 + 1.5 × IQR = ${res.q3} + 1.5(${res.iqr}) = <strong>${res.upperFence}</strong>
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">3. VALUE OUTLIER CHECK TABLE</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.9rem;">
+          <thead><tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; text-align: left;"><th style="padding: 8px;">Value</th><th style="padding: 8px;">Condition (&lt; Lower Fence ${res.lowerFence} OR &gt; Upper Fence ${res.upperFence})</th><th style="padding: 8px;">Status</th></tr></thead>
+          <tbody>
+            ${res.sorted.map(v => {
+              const isOut = v < res.lowerFence || v > res.upperFence;
+              return `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 8px; font-weight: bold;">${v}</td><td style="padding: 8px;">${isOut ? 'OUTSIDE FENCES' : 'Inside Valid Range'}</td><td style="padding: 8px; font-weight: bold; color: ${isOut ? '#dc2626' : '#059669'};">${isOut ? '⚠️ OUTLIER' : '✓ Normal'}</td></tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            IQR = <strong>${res.iqr}</strong><br>
+            Detected Outliers: <strong>${res.outliers.join(', ') || 'None'}</strong>
+          </p>
+        </div>
+      `;
+
+      examContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
+          <strong>Exam-Ready Answer:</strong> "Q1=${res.q1}, Q3=${res.q3}, IQR=Q3-Q1=${res.iqr}. Fences [Q1-1.5IQR, Q3+1.5IQR] = [${res.lowerFence}, ${res.upperFence}]. Outliers identified: ${res.outliers.join(', ') || 'None'}."
+        </div>
+      `;
+
+      simpleContent = `
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
+          <strong>Simple Explanation:</strong> IQR measures the middle 50% spread of data and sets boundaries to flag numbers that are unusually high or low.
+        </div>
+      `;
+    }
+
+    // 13. EVALUATION METRICS SOLVER DERIVATION
+    else if (algo === 'metrics') {
+      const nums = this.parseInputNumbers(inputVal);
+      const cm = {
+        tp: nums[0] ?? 85,
+        tn: nums[1] ?? 90,
+        fp: nums[2] ?? 10,
+        fn: nums[3] ?? 15
+      };
+      const res = NumericalEngine.evaluationMetrics(cm);
+
+      detailedContent = `
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; CONFUSION MATRIX DATA</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          True Positives (TP) = ${cm.tp} | True Negatives (TN) = ${cm.tn}<br>
+          False Positives (FP) = ${cm.fp} | False Negatives (FN) = ${cm.fn} | Total (N) = ${res.total}
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. METRIC FORMULAS &amp; STEP SUBSTITUTIONS</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb; line-height: 1.8;">
+          Accuracy = (TP + TN) / Total = (${cm.tp} + ${cm.tn}) / ${res.total} = <strong>${res.percentages.accuracy}</strong><br>
+          Precision = TP / (TP + FP) = ${cm.tp} / (${cm.tp} + ${cm.fp}) = <strong>${res.percentages.precision}</strong><br>
+          Recall (Sensitivity) = TP / (TP + FN) = ${cm.tp} / (${cm.tp} + ${cm.fn}) = <strong>${res.percentages.recall}</strong><br>
+          F1-Score = 2 × (Precision × Recall) / (Precision + Recall) = <strong>${res.percentages.f1Score}</strong>
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            Accuracy = <strong>${res.percentages.accuracy}</strong> | Precision = <strong>${res.percentages.precision}</strong> | Recall = <strong>${res.percentages.recall}</strong> | F1-Score = <strong>${res.percentages.f1Score}</strong>
+          </p>
+        </div>
+      `;
+
+      examContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
+          <strong>Exam-Ready Answer:</strong> "Given TP=${cm.tp}, TN=${cm.tn}, FP=${cm.fp}, FN=${cm.fn}: Accuracy=(TP+TN)/N=${res.percentages.accuracy}, Precision=TP/(TP+FP)=${res.percentages.precision}, Recall=TP/(TP+FN)=${res.percentages.recall}, F1=${res.percentages.f1Score}."
+        </div>
+      `;
+
+      simpleContent = `
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
+          <strong>Simple Explanation:</strong> Evaluation metrics show overall correctness (Accuracy), how trustworthy positive claims are (Precision), and how many real positives were caught (Recall).
+        </div>
+      `;
+    }
+
+    // 14. DWH CUBES / OLAP SOLVER DERIVATION
+    else {
+      detailedContent = `
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">1. QUESTION &amp; DATA CUBE SPECIFICATION</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px;">
+          Subject: Data Warehousing OLAP Numerical Operation<br>
+          Dimensions: Time (Q1-Q4), Location (Mumbai, Delhi, Bangalore), Item (Electronics)
+        </div>
+
+        <h4 style="font-size: 1rem; font-weight: 700; color: #334155; margin-bottom: 8px;">2. OLAP OPERATIONS DERIVATIONS</h4>
+        <div style="background: #eff6ff; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 0.88rem; margin-bottom: 16px; border-left: 4px solid #2563eb; line-height: 1.8;">
+          1. Roll-Up (Time Hierarchy: Quarter ➔ Year): Σ Sales(Q1..Q4) = 350,000 + 420,000 + 380,000 + 270,000 = <strong>1,420,000 units</strong><br>
+          2. Drill-Down (Location Hierarchy: Country ➔ City): Expands total India sales into Mumbai, Delhi, Bangalore cuboids.<br>
+          3. Slice (Location = "Mumbai"): Filters 2D slice matrix.<br>
+          4. Dice (Location ∈ {"Mumbai","Delhi"} AND Time = "2024"): Sub-cube extraction.
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 1.1rem; font-weight: 800; color: #166534; margin: 0 0 4px;">FINAL ANSWER</h4>
+          <p style="font-size: 0.95rem; color: #15803d; margin: 0;">
+            Data Cube roll-up aggregation total = <strong>1,420,000 units</strong>.
+          </p>
+        </div>
+      `;
+
+      examContent = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #1e293b;">
+          <strong>Exam-Ready Answer:</strong> "Roll-up aggregates measure along dimension concept hierarchy (Quarter➔Year: 1,420,000). Drill-down navigates to lower level detail. Slice filters 1 dimension; Dice selects sub-cube."
+        </div>
+      `;
+
+      simpleContent = `
+        <div style="background: #fff7ed; border: 1px solid #ffedd5; padding: 18px; border-radius: 10px; font-size: 0.95rem; color: #9a3412;">
+          <strong>Simple Explanation:</strong> OLAP operations let you zoom out (roll-up), zoom in (drill-down), or slice specific views of data in a 3D data cube.
         </div>
       `;
     }
