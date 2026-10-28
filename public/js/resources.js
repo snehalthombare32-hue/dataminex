@@ -21,7 +21,7 @@ export class ResourcesManager {
             <span>Academic Resources &amp; Textbook References</span>
           </h2>
           <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
-            Formula cheat sheets, sample datasets, university syllabus references, and textbook bibliography
+            Sample datasets, university syllabus references, and textbook bibliography
           </p>
         </div>
 
@@ -62,41 +62,6 @@ export class ResourcesManager {
           </div>
         </div>
 
-        <!-- Section 2: Formula Cheat Sheets -->
-        <div style="margin-bottom: 30px;">
-          <h3 style="font-size: 16px; font-weight: 800; color: var(--text-primary); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-            <i data-lucide="file-text" style="width: 18px; height: 18px; color: #f59e0b;"></i>
-            <span>Core Mathematical Formula Cheat Sheets</span>
-          </h3>
-
-          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
-            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; font-family: monospace; font-size: 12px; line-height: 1.6;">
-              <h4 style="color: #f59e0b; font-family: inherit; font-size: 13px; margin-bottom: 8px;">K-Means Distance &amp; Centroid</h4>
-              <p>Euclidean: $d = \\sqrt{(x_2-x_1)^2 + (y_2-y_1)^2}$</p>
-              <p>Centroid Mean: $C_x = \\frac{1}{N} \\sum x_i, C_y = \\frac{1}{N} \\sum y_i$</p>
-            </div>
-
-            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; font-family: monospace; font-size: 12px; line-height: 1.6;">
-              <h4 style="color: #10b981; font-family: inherit; font-size: 13px; margin-bottom: 8px;">ID3 Entropy &amp; Info Gain</h4>
-              <p>Entropy: $H(S) = -\\sum p_i \\log_2(p_i)$</p>
-              <p>Gain: $Gain(S, A) = H(S) - \\sum \\frac{|S_v|}{|S|} H(S_v)$</p>
-            </div>
-
-            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; font-family: monospace; font-size: 12px; line-height: 1.6;">
-              <h4 style="color: #38bdf8; font-family: inherit; font-size: 13px; margin-bottom: 8px;">Apriori Market Basket</h4>
-              <p>Support: $P(A \\cup B) = \\frac{\\text{Count}(A \\cup B)}{N}$</p>
-              <p>Confidence: $P(B|A) = \\frac{\\text{Count}(A \\cup B)}{\\text{Count}(A)}$</p>
-              <p>Lift: $\\frac{P(A \\cup B)}{P(A) \\times P(B)}$</p>
-            </div>
-
-            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; font-family: monospace; font-size: 12px; line-height: 1.6;">
-              <h4 style="color: #a855f7; font-family: inherit; font-size: 13px; margin-bottom: 8px;">IQR &amp; Outlier Fences</h4>
-              <p>$IQR = Q_3 - Q_1$</p>
-              <p>Lower Fence = $Q_1 - 1.5 \\times IQR$</p>
-              <p>Upper Fence = $Q_3 + 1.5 \\times IQR$</p>
-            </div>
-          </div>
-        </div>
 
         <!-- Section 3: Downloads & Datasets -->
         <div>

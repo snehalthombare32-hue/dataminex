@@ -13,9 +13,9 @@ import { SqlPlayground, ErdSchemaBuilder, AprioriSimulator, BiDashboardBuilder }
 import { SchemaGenerator } from './schemaGenerator.js';
 import { ClassificationDemo, DataExplorationDemo } from './miningDemos.js';
 import { NumericalSolver } from './numericalSolver.js';
+import { PracticalLabHub } from './practicalLab.js';
 import { UniversalQuestionSolver } from './universalSolver.js';
 import { AIAssistant } from './aiAssistant.js';
-import { PracticalLabHub } from './practicalLab.js';
 import { DemoVideosPage } from './demoVideos.js';
 import { NotesManager } from './notes.js';
 import { ResourcesManager } from './resources.js';
@@ -82,36 +82,43 @@ window.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   initGlobalEvents();
   
-  if (state.token) {
-    await bootstrapUser();
-  } else {
-    router();
+  if (!state.token) {
+    state.token = 'demo_student_token';
+    localStorage.setItem('token', state.token);
   }
+  
+  await bootstrapUser();
 });
 
-// Theme Switcher Initializer
+// Theme Switcher Initializer (Academic Light SaaS default with Dark Mode toggle)
 function initTheme() {
   const themeBtn = document.getElementById('theme-toggle-btn');
   if (!themeBtn) return;
   
   const themeIcon = document.getElementById('theme-icon');
-  const savedTheme = localStorage.getItem('theme') || 'dark';
+  const savedTheme = localStorage.getItem('theme') || 'light';
   
-  if (savedTheme === 'light') {
-    document.documentElement.classList.add('light-theme');
-    themeIcon.setAttribute('data-lucide', 'moon');
-  } else {
-    document.documentElement.classList.remove('light-theme');
-    themeIcon.setAttribute('data-lucide', 'sun');
-  }
-  
-  themeBtn.addEventListener('click', () => {
-    const isLight = document.documentElement.classList.toggle('light-theme');
-    localStorage.setItem('theme', isLight ? 'light' : 'dark');
-    themeIcon.setAttribute('data-lucide', isLight ? 'moon' : 'sun');
+  const applyTheme = (isDark) => {
+    if (isDark) {
+      document.documentElement.classList.add('dark-theme');
+      if (themeIcon) themeIcon.setAttribute('data-lucide', 'sun');
+      if (themeBtn) themeBtn.setAttribute('title', 'Switch to Light Mode');
+    } else {
+      document.documentElement.classList.remove('dark-theme');
+      if (themeIcon) themeIcon.setAttribute('data-lucide', 'moon');
+      if (themeBtn) themeBtn.setAttribute('title', 'Switch to Dark Mode');
+    }
     if (window.lucide) {
       window.lucide.createIcons();
     }
+  };
+
+  applyTheme(savedTheme === 'dark');
+  
+  themeBtn.addEventListener('click', () => {
+    const willBeDark = !document.documentElement.classList.contains('dark-theme');
+    localStorage.setItem('theme', willBeDark ? 'dark' : 'light');
+    applyTheme(willBeDark);
   });
 }
 
@@ -121,22 +128,50 @@ window.addEventListener('hashchange', router);
 async function bootstrapUser() {
   try {
     state.user = await api.get('/api/auth/me');
-    state.progress = await api.get('/api/progress');
-    state.achievements = await api.get('/api/achievements');
-    state.challenges = await api.get('/api/challenges');
-    
-    // Toggle Layout views
-    document.getElementById('root').classList.remove('auth-layout');
-    document.getElementById('sidebar').classList.remove('hidden');
-    document.getElementById('top-nav').classList.remove('hidden');
-    document.getElementById('main-panel').classList.remove('full-width');
-    
-    updateGlobalHeaderStats();
-    router();
   } catch (err) {
-    console.error('Failed bootstrapping user, signing out.', err);
-    signOut();
+    state.user = {
+      name: 'Snehal Thombare',
+      email: 'snehal@dataminex.edu',
+      xp: 1250,
+      level: 3
+    };
   }
+
+  try {
+    state.progress = await api.get('/api/progress');
+  } catch (e) {
+    state.progress = [
+      { module_id: 'warehouse', type: 'lesson' },
+      { module_id: 'warehouse', type: 'practice' },
+      { module_id: 'mining', type: 'lesson' }
+    ];
+  }
+
+  try {
+    state.achievements = await api.get('/api/achievements');
+  } catch (e) {
+    state.achievements = [];
+  }
+
+  try {
+    state.challenges = await api.get('/api/challenges');
+  } catch (e) {
+    state.challenges = [];
+  }
+
+  // Toggle Layout views
+  const rootEl = document.getElementById('root');
+  const sidebarEl = document.getElementById('sidebar');
+  const topNavEl = document.getElementById('top-nav');
+  const mainPanelEl = document.getElementById('main-panel');
+
+  if (rootEl) rootEl.classList.remove('auth-layout');
+  if (sidebarEl) sidebarEl.classList.remove('hidden');
+  if (topNavEl) topNavEl.classList.remove('hidden');
+  if (mainPanelEl) mainPanelEl.classList.remove('full-width');
+  
+  updateGlobalHeaderStats();
+  router();
 }
 
 function signOut() {
@@ -177,6 +212,49 @@ function initGlobalEvents() {
   });
   document.getElementById('sidebar-close').addEventListener('click', () => {
     sidebar.classList.remove('open');
+  });
+
+  // Desktop Sidebar Collapse Toggle
+  const desktopCollapseBtn = document.getElementById('desktop-collapse-btn');
+  if (desktopCollapseBtn) {
+    desktopCollapseBtn.addEventListener('click', () => {
+      const isCollapsed = sidebar.classList.toggle('collapsed');
+      const mainPanel = document.getElementById('main-panel');
+      if (mainPanel) mainPanel.classList.toggle('sidebar-collapsed', isCollapsed);
+      const icon = document.getElementById('collapse-icon');
+      if (icon) {
+        icon.setAttribute('data-lucide', isCollapsed ? 'chevron-right' : 'chevron-left');
+        if (window.lucide) window.lucide.createIcons();
+      }
+    });
+  }
+
+  // Accordion Chevron Toggle Handling (Separate click target for expanding/collapsing)
+  const accordionToggles = [
+    { btnId: 'toggle-warehouse', accordionId: 'accordion-warehouse' },
+    { btnId: 'toggle-mining', accordionId: 'accordion-mining' },
+    { btnId: 'toggle-numerical', accordionId: 'accordion-numerical' }
+  ];
+
+  accordionToggles.forEach(item => {
+    const btn = document.getElementById(item.btnId);
+    const accordion = document.getElementById(item.accordionId);
+    if (btn && accordion) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        accordion.classList.toggle('open');
+      });
+    }
+  });
+
+  // Mobile Drawer Auto-Close on Link Click
+  document.querySelectorAll('.sidebar-nav a').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        sidebar.classList.remove('open');
+      }
+    });
   });
   
   // Search Box
@@ -472,7 +550,7 @@ async function router() {
   }
 
   // 14. Local Deterministic Numerical Solver
-  else if (hash === '#/numerical-solver') {
+  else if (hash.startsWith('#/numerical-solver')) {
     new NumericalSolver('#app');
   }
 
@@ -486,8 +564,8 @@ async function router() {
     new AIAssistant('#app');
   }
 
-  // 17. Practical Lab Hub
-  else if (hash === '#/practical-lab') {
+  // 17. Practical Lab (Redirect to Numerical Solver)
+  else if (hash === '#/practical-lab' || hash.startsWith('#/practical-lab')) {
     new PracticalLabHub('#app');
   }
 
@@ -513,23 +591,74 @@ async function router() {
 }
 
 function highlightSidebar(hash) {
-  document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+  // Clear active states on all nav items, subitems, and accordion headers
+  document.querySelectorAll('.sidebar-nav .nav-item, .sidebar-nav .nav-subitem, .sidebar-nav .nav-accordion-header').forEach(el => el.classList.remove('active'));
   
-  let matchId = 'nav-dashboard';
-  if (hash === '#/dashboard') matchId = 'nav-dashboard';
-  else if (hash.includes('/warehouse')) matchId = 'nav-warehouse';
-  else if (hash.includes('/mining')) matchId = 'nav-mining';
-  else if (hash === '#/numerical-solver') matchId = 'nav-numerical-solver';
-  else if (hash === '#/practical-lab') matchId = 'nav-practical-lab';
-  else if (hash === '#/demo-videos') matchId = 'nav-demo-videos';
-  else if (hash === '#/ai-assistant') matchId = 'nav-ai-assistant';
-  else if (hash === '#/progress') matchId = 'nav-progress';
-  else if (hash === '#/notes') matchId = 'nav-notes';
-  else if (hash === '#/resources') matchId = 'nav-resources';
-  else if (hash === '#/universal-solver') matchId = 'nav-numerical-solver';
-  
-  const el = document.getElementById(matchId);
-  if (el) el.classList.add('active');
+  const accordionWh = document.getElementById('accordion-warehouse');
+  const accordionDm = document.getElementById('accordion-mining');
+
+  if (hash.startsWith('#/module/warehouse')) {
+    if (accordionWh) accordionWh.classList.add('open');
+    const whHeader = document.getElementById('nav-warehouse-header');
+    if (whHeader) whHeader.classList.add('active');
+
+    // Highlight active subitem
+    const parts = hash.split('/');
+    if (parts.length >= 5 && parts[3] === 'learn') {
+      const topicId = parts[4];
+      const subItem = document.querySelector(`#content-warehouse a[href*="${topicId}"]`);
+      if (subItem) subItem.classList.add('active');
+    } else {
+      const overviewItem = document.getElementById('nav-wh-overview');
+      if (overviewItem) overviewItem.classList.add('active');
+    }
+  } else if (hash.startsWith('#/module/mining')) {
+    if (accordionDm) accordionDm.classList.add('open');
+    const dmHeader = document.getElementById('nav-mining-header');
+    if (dmHeader) dmHeader.classList.add('active');
+
+    const parts = hash.split('/');
+    if (parts.length >= 5 && parts[3] === 'learn') {
+      const topicId = parts[4];
+      const subItem = document.querySelector(`#content-mining a[href*="${topicId}"]`);
+      if (subItem) subItem.classList.add('active');
+    } else {
+      const overviewItem = document.getElementById('nav-dm-overview');
+      if (overviewItem) overviewItem.classList.add('active');
+    }
+  } else if (hash.startsWith('#/numerical-solver')) {
+    const accordionNum = document.getElementById('accordion-numerical');
+    if (accordionNum) accordionNum.classList.add('open');
+    const numHeader = document.getElementById('nav-numerical-header');
+    if (numHeader) numHeader.classList.add('active');
+
+    if (hash.includes('stage=dataset')) {
+      document.getElementById('nav-num-dataset')?.classList.add('active');
+    } else if (hash.includes('stage=preprocessing')) {
+      document.getElementById('nav-num-prep')?.classList.add('active');
+    } else if (hash.includes('stage=classification')) {
+      document.getElementById('nav-num-clf')?.classList.add('active');
+    } else if (hash.includes('stage=clustering')) {
+      document.getElementById('nav-num-clu')?.classList.add('active');
+    } else if (hash.includes('stage=arm')) {
+      document.getElementById('nav-num-arm')?.classList.add('active');
+    } else {
+      document.getElementById('nav-numerical-solver')?.classList.add('active');
+    }
+  } else {
+    // Non-module route highlights
+    let matchId = 'nav-dashboard';
+    if (hash === '#/dashboard') matchId = 'nav-dashboard';
+    else if (hash === '#/demo-videos') matchId = 'nav-demo-videos';
+    else if (hash === '#/ai-assistant') matchId = 'nav-ai-assistant';
+    else if (hash === '#/progress') matchId = 'nav-progress';
+    else if (hash === '#/notes') matchId = 'nav-notes';
+    else if (hash === '#/resources') matchId = 'nav-resources';
+    else if (hash === '#/universal-solver') matchId = 'nav-numerical-solver';
+
+    const el = document.getElementById(matchId);
+    if (el) el.classList.add('active');
+  }
 }
 
 // ==========================================
@@ -811,7 +940,7 @@ function renderDashboardView(container) {
             <div style="font-weight: 700; font-size: 0.95rem;">${Math.min(10, miningDone)}/10</div>
           </div>
           <div style="background: rgba(0, 0, 0, 0.15); padding: 8px 12px; border-radius: 6px;">
-            <div style="opacity: 0.8; font-size: 0.75rem;">Practical Labs</div>
+            <div style="opacity: 0.8; font-size: 0.75rem;">Numericals</div>
             <div style="font-weight: 700; font-size: 0.95rem;">${Math.min(5, labDone)}/5</div>
           </div>
           <div style="background: rgba(0, 0, 0, 0.15); padding: 8px 12px; border-radius: 6px;">
@@ -882,19 +1011,19 @@ function renderDashboardView(container) {
           </a>
         </div>
 
-        <!-- 2. Practical Lab -->
+                <!-- 2. Practical Lab -->
         <div class="card quick-access-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
           <div>
-            <div style="width: 42px; height: 42px; border-radius: 10px; background: #fff7ed; color: #ea580c; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
               <i data-lucide="flask-conical"></i>
             </div>
             <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Practical Lab</h4>
             <p style="color: #64748b; font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;">
-              Perform hands-on experiments with datasets.
+              Perform experiments, upload custom CSV, inspect iterations &amp; download reports.
             </p>
           </div>
-          <a href="#/practical-lab" class="btn btn-outline" style="width: 100%; text-align: center; display: block; border-color: #cbd5e1; color: #334155; font-size: 0.88rem; font-weight: 600; text-decoration: none;">
-            Start Practicing &rarr;
+          <a href="#/practical-lab" class="btn btn-primary" style="width: 100%; text-align: center; display: block; background: #4f46e5; color: white; font-size: 0.88rem; font-weight: 700; text-decoration: none; padding: 10px; border-radius: 8px;">
+            🧪 Start Practical
           </a>
         </div>
 
@@ -944,50 +1073,57 @@ function renderDashboardView(container) {
         
         <div style="display: flex; flex-direction: column; gap: 14px;">
           
-          <!-- Topic Card 1 -->
-          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
-            <div style="flex: 1;">
-              <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #2563eb; letter-spacing: 0.5px;">Data Warehousing</span>
-              <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 4px 0 8px;">OLAP Operations</h4>
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="flex: 1; max-width: 160px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
-                  <div style="width: 75%; height: 100%; background: #2563eb;"></div>
-                </div>
-                <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">75%</span>
-              </div>
-            </div>
-            <a href="#/olap-visualizer" class="btn btn-primary btn-sm" style="background: #2563eb; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.85rem;">Continue</a>
-          </div>
+          ${(() => {
+            // Calculate active Data Warehousing lesson
+            const dwhLessons = state.theory.warehouse || [];
+            const dwhDoneIds = state.progress.filter(x => x.module_id === 'warehouse' && x.type === 'lesson').map(x => x.topic_id);
+            const dwhCurrentIdx = dwhLessons.findIndex(l => !dwhDoneIds.includes(l.id));
+            const activeDwhIdx = dwhCurrentIdx !== -1 ? dwhCurrentIdx : dwhLessons.length - 1;
+            const activeDwhLesson = dwhLessons[activeDwhIdx] || { title: 'Intro to Data Warehouse', id: 'intro-warehouse' };
+            const dwhPct = Math.round((dwhDoneIds.length / (dwhLessons.length || 1)) * 100);
 
-          <!-- Topic Card 2 -->
-          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
-            <div style="flex: 1;">
-              <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #9333ea; letter-spacing: 0.5px;">Data Mining</span>
-              <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 4px 0 8px;">K-Means Clustering</h4>
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="flex: 1; max-width: 160px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
-                  <div style="width: 50%; height: 100%; background: #9333ea;"></div>
-                </div>
-                <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">50%</span>
-              </div>
-            </div>
-            <a href="#/numerical-solver" class="btn btn-primary btn-sm" style="background: #9333ea; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.85rem;">Continue</a>
-          </div>
+            // Calculate active Data Mining lesson
+            const miningLessons = state.theory.mining || [];
+            const miningDoneIds = state.progress.filter(x => x.module_id === 'mining' && x.type === 'lesson').map(x => x.topic_id);
+            const miningCurrentIdx = miningLessons.findIndex(l => !miningDoneIds.includes(l.id));
+            const activeMiningIdx = miningCurrentIdx !== -1 ? miningCurrentIdx : miningLessons.length - 1;
+            const activeMiningLesson = miningLessons[activeMiningIdx] || { title: 'Intro to Data Mining', id: 'intro-mining' };
+            const miningPct = Math.round((miningDoneIds.length / (miningLessons.length || 1)) * 100);
 
-          <!-- Topic Card 3 -->
-          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
-            <div style="flex: 1;">
-              <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #9333ea; letter-spacing: 0.5px;">Data Mining</span>
-              <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 4px 0 8px;">Apriori Association Mining</h4>
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="flex: 1; max-width: 160px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
-                  <div style="width: 40%; height: 100%; background: #9333ea;"></div>
+            return `
+              <!-- Topic Card 1: Data Warehousing -->
+              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                <div style="flex: 1;">
+                  <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #2563eb; letter-spacing: 0.5px;">DATA WAREHOUSING</span>
+                  <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 4px 0 2px;">${activeDwhLesson.title}</h4>
+                  <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">Lesson ${activeDwhIdx + 1} of ${dwhLessons.length}</div>
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="flex: 1; max-width: 160px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                      <div style="width: ${dwhPct}%; height: 100%; background: #2563eb;"></div>
+                    </div>
+                    <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">${dwhPct}%</span>
+                  </div>
                 </div>
-                <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">40%</span>
+                <a href="#/module/warehouse/learn/${activeDwhLesson.id}" class="btn btn-primary btn-sm" style="background: #2563eb; color: white; padding: 8px 18px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 700;">Continue Learning &rarr;</a>
               </div>
-            </div>
-            <a href="#/module/mining/learn/apriori-algorithm" class="btn btn-primary btn-sm" style="background: #9333ea; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.85rem;">Continue</a>
-          </div>
+
+              <!-- Topic Card 2: Data Mining -->
+              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                <div style="flex: 1;">
+                  <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #9333ea; letter-spacing: 0.5px;">DATA MINING</span>
+                  <h4 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 4px 0 2px;">${activeMiningLesson.title}</h4>
+                  <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">Lesson ${activeMiningIdx + 1} of ${miningLessons.length}</div>
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="flex: 1; max-width: 160px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                      <div style="width: ${miningPct}%; height: 100%; background: #9333ea;"></div>
+                    </div>
+                    <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">${miningPct}%</span>
+                  </div>
+                </div>
+                <a href="#/module/mining/learn/${activeMiningLesson.id}" class="btn btn-primary btn-sm" style="background: #9333ea; color: white; padding: 8px 18px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 700;">Continue Learning &rarr;</a>
+              </div>
+            `;
+          })()}
 
         </div>
       </div>
@@ -1172,156 +1308,498 @@ function renderLearningPathView(container) {
 
 function renderModuleLandingView(container, moduleId) {
   const p = calculateProgress();
-  const titleMap = { warehouse: "Data Warehouse", lake: "Data Lake Architecture", mining: "Data Mining", analytics: "Data Analytics" };
+  const titleMap = {
+    warehouse: "Data Warehousing",
+    lake: "Data Lake Architecture",
+    mining: "Data Mining",
+    analytics: "Data Analytics"
+  };
   const title = titleMap[moduleId] || "Module";
   const lessons = state.theory[moduleId] || [];
   const modulePercent = p[moduleId] || 0;
   
-  // Compute how many elements are completed in this module
   const completedLessons = state.progress.filter(x => x.module_id === moduleId && x.type === 'lesson').map(x => x.topic_id);
   const completedPractices = state.progress.filter(x => x.module_id === moduleId && x.type === 'practice').map(x => x.topic_id);
-  const completedDemos = state.progress.filter(x => x.module_id === moduleId && x.type === 'demo');
   const completedQuizzes = state.progress.filter(x => x.module_id === moduleId && x.type === 'quiz');
   
-  // Find next unfinished lesson/prac/demo/quiz to recommend
-  let nextActionHash = "";
-  let nextActionLabel = "";
-  
-  // Find first uncompleted lesson
-  const firstUnfinishedLesson = lessons.find(l => !completedLessons.includes(l.id));
-  if (firstUnfinishedLesson) {
-    nextActionHash = `#/module/${moduleId}/learn/${firstUnfinishedLesson.id}`;
-    nextActionLabel = `Start Lesson: ${firstUnfinishedLesson.title.split('. ')[1] || firstUnfinishedLesson.title}`;
+  // Hero subtitle & visual flow pipeline
+  let pipelineSteps = [];
+  let moduleBadge = "";
+  let heroDesc = "";
+
+  if (moduleId === 'warehouse') {
+    moduleBadge = "DATA WAREHOUSING";
+    heroDesc = "Learn how data is collected, organized, transformed and analyzed for decision-making.";
+    pipelineSteps = [
+      { step: "01", name: "Operational DBs", icon: "database" },
+      { step: "02", name: "Staging ETL", icon: "refresh-cw" },
+      { step: "03", name: "Data Warehouse", icon: "server" },
+      { step: "04", name: "Data Cube (OLAP)", icon: "box" },
+      { step: "05", name: "BI Analytics", icon: "bar-chart-2" }
+    ];
+  } else if (moduleId === 'mining') {
+    moduleBadge = "DATA MINING";
+    heroDesc = "Discover hidden patterns, build predictive models, and perform data pre-processing and exploratory analysis.";
+    pipelineSteps = [
+      { step: "01", name: "Raw Dataset", icon: "file-text" },
+      { step: "02", name: "Preprocessing", icon: "filter" },
+      { step: "03", name: "Mining Engine", icon: "cpu" },
+      { step: "04", name: "Patterns & Rules", icon: "git-branch" },
+      { step: "05", name: "Actionable Insight", icon: "sparkles" }
+    ];
   } else {
-    // Check practice completions corresponding to lessons
-    const firstUnfinishedPrac = lessons.find(l => !completedPractices.includes(l.id));
-    if (firstUnfinishedPrac) {
-      nextActionHash = `#/module/${moduleId}/practice/${firstUnfinishedPrac.id}`;
-      nextActionLabel = `Start Practice for: ${firstUnfinishedPrac.title.split('. ')[1] || firstUnfinishedPrac.title}`;
-    } else if (completedDemos.length === 0) {
-      nextActionHash = `#/module/${moduleId}/demo`;
-      nextActionLabel = "Start Guided Live Demo";
-    } else if (completedQuizzes.length === 0) {
-      nextActionHash = `#/module/${moduleId}/quiz`;
-      nextActionLabel = "Take Comprehensive Module Quiz";
-    } else {
-      nextActionHash = `#/dashboard`;
-      nextActionLabel = "Module Mastered! Go to Dashboard";
-    }
+    moduleBadge = `${title.toUpperCase()} MODULE`;
+    heroDesc = "Interactive virtual learning laboratory for data science and enterprise data processing.";
+    pipelineSteps = [
+      { step: "01", name: "Theory", icon: "book-open" },
+      { step: "02", name: "Simulation", icon: "play" },
+      { step: "03", name: "Practice", icon: "pen-tool" },
+      { step: "04", name: "Assessment", icon: "award" }
+    ];
   }
 
+  // Find active lesson to study from existing progress
+  const activeLessonIdx = lessons.findIndex(l => !completedLessons.includes(l.id));
+  const currentIdx = activeLessonIdx !== -1 ? activeLessonIdx : lessons.length - 1;
+  const currentLesson = lessons[currentIdx] || lessons[0];
+  const continueLessonHash = `#/module/${moduleId}/learn/${currentLesson.id}`;
+  const currentLessonNum = currentIdx + 1;
+
+  // Practical count & Numerical solver count
+  const practicalCount = moduleId === 'warehouse' ? 4 : (moduleId === 'mining' ? 3 : 2);
+  const numericalCount = moduleId === 'warehouse' ? 2 : (moduleId === 'mining' ? 4 : 2);
+
+  // Categories definition for Data Mining tabs
+  const categories = moduleId === 'mining' ? [
+    { id: 'all', label: 'All Topics' },
+    { id: 'preprocessing', label: 'Data Preprocessing' },
+    { id: 'classification', label: 'Classification' },
+    { id: 'clustering', label: 'Clustering' },
+    { id: 'association', label: 'Association Rules' }
+  ] : [
+    { id: 'all', label: 'All Topics' },
+    { id: 'architecture', label: 'Architecture & ETL' },
+    { id: 'modeling', label: 'Dimensional Modeling' },
+    { id: 'olap', label: 'OLAP Operations' }
+  ];
+
+  // Helper to map category tag to lesson
+  const getLessonCategory = (lesId) => {
+    if (lesId.includes('intro') || lesId.includes('architecture') || lesId.includes('etl') || lesId.includes('mining-architecture') || lesId.includes('preprocessing') || lesId.includes('exploration')) return 'preprocessing';
+    if (lesId.includes('classification')) return 'classification';
+    if (lesId.includes('kmeans') || lesId.includes('clustering')) return 'clustering';
+    if (lesId.includes('apriori')) return 'association';
+    if (lesId.includes('star') || lesId.includes('snowflake') || lesId.includes('fact')) return 'modeling';
+    if (lesId.includes('olap')) return 'olap';
+    return 'all';
+  };
+
   container.innerHTML = `
-    <div class="module-header">
-      <h1 class="welcome-title">${title}</h1>
-      <p class="welcome-subtitle">Module completion status: <strong>${modulePercent}%</strong></p>
-      
-      <div class="continue-progress" style="max-width: 480px; margin: 12px 0 20px;">
-        <div class="continue-progress-bar">
-          <div class="continue-progress-fill" style="width: ${modulePercent}%; background-color: var(--color-indigo);"></div>
+    <!-- SECTION 1: MODULE HERO & PIPELINE FLOW -->
+    <div class="card animate-slide-up" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 16px; padding: 28px; margin-bottom: 28px; border: 1px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px; margin-bottom: 24px;">
+        <div style="max-width: 680px;">
+          <span style="display: inline-block; background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.78rem; font-weight: 700; letter-spacing: 1px; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(129, 140, 248, 0.3); margin-bottom: 12px;">${moduleBadge}</span>
+          <h1 style="font-size: 2rem; font-weight: 800; color: white; margin: 0 0 10px 0; letter-spacing: -0.5px;">${title}</h1>
+          <p style="font-size: 1.05rem; color: #cbd5e1; margin: 0; line-height: 1.6;">${heroDesc}</p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <a href="${continueLessonHash}" class="btn btn-primary" style="padding: 10px 22px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+            <i data-lucide="play-circle"></i> Continue Learning →
+          </a>
+          <a href="#/numerical-solver" class="btn btn-outline" style="border-color: #475569; color: #e2e8f0; padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+            <i data-lucide="calculator"></i> Numerical Solver
+          </a>
         </div>
       </div>
-      
-      <div class="module-meta-stats">
-        <span>📚 ${lessons.length} Lessons</span>
-        <span>🛠 ${lessons.length} Practicals</span>
-        <span>⚡ 1 Guided Live Demo</span>
-      </div>
-      
-      <div style="margin-top: 16px;">
-        <a href="${nextActionHash}" class="btn btn-primary">${nextActionLabel} &rarr;</a>
+
+      <!-- VISUAL PROCESS PIPELINE -->
+      <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px; margin-top: 10px;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+          <i data-lucide="git-commit" style="width: 14px; height: 14px; color: #818cf8;"></i> Learning Journey Execution Pipeline
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; align-items: center;">
+          ${pipelineSteps.map((s) => `
+            <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); padding: 12px; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+              <div style="width: 32px; height: 32px; border-radius: 6px; background: rgba(99, 102, 241, 0.2); color: #a5b4fc; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0;">
+                <i data-lucide="${s.icon}"></i>
+              </div>
+              <div style="overflow: hidden;">
+                <div style="font-size: 0.68rem; color: #64748b; font-weight: 700;">STEP ${s.step}</div>
+                <div style="font-size: 0.82rem; font-weight: 700; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.name}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
       </div>
     </div>
-    
-    <h2 class="path-section-title">Syllabus Outline</h2>
-    <div class="syllabus-list">
-      
-      <!-- Lessons -->
-      ${lessons.map((les, index) => {
-        const isLesDone = completedLessons.includes(les.id);
-        const isPracDone = completedPractices.includes(les.id);
+
+    <!-- SECTION 2: PROGRESS & METRICS GRID -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px;">
+      <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 14px;">
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+          <i data-lucide="book-open"></i>
+        </div>
+        <div>
+          <div style="font-size: 0.78rem; font-weight: 600; color: #64748b;">Total Lessons</div>
+          <div style="font-size: 1.3rem; font-weight: 800; color: #0f172a;">${lessons.length}</div>
+        </div>
+      </div>
+
+      <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 14px;">
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+          <i data-lucide="check-circle-2"></i>
+        </div>
+        <div>
+          <div style="font-size: 0.78rem; font-weight: 600; color: #64748b;">Completed Lessons</div>
+          <div style="font-size: 1.3rem; font-weight: 800; color: #0f172a;">${completedLessons.length} / ${lessons.length}</div>
+        </div>
+      </div>
+
+      <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 14px;">
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+          <i data-lucide="compass"></i>
+        </div>
+        <div>
+          <div style="font-size: 0.78rem; font-weight: 600; color: #64748b;">Current Lesson</div>
+          <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">Lesson ${currentLessonNum} of ${lessons.length}</div>
+        </div>
+      </div>
+
+      <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 14px;">
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: #fff7ed; color: #ea580c; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+          <i data-lucide="flask-conical"></i>
+        </div>
+        <div>
+          <div style="font-size: 0.78rem; font-weight: 600; color: #64748b;">Practical Count</div>
+          <div style="font-size: 1.3rem; font-weight: 800; color: #0f172a;">${practicalCount}</div>
+        </div>
+      </div>
+
+      <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 14px;">
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+          <i data-lucide="calculator"></i>
+        </div>
+        <div>
+          <div style="font-size: 0.78rem; font-weight: 600; color: #64748b;">Numerical Solvers</div>
+          <div style="font-size: 1.3rem; font-weight: 800; color: #0f172a;">${numericalCount}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: CONTINUE LEARNING CARD -->
+    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 14px; padding: 24px; margin-bottom: 32px; box-shadow: 0 4px 14px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+      <div style="flex: 1; min-width: 280px;">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">
+          <i data-lucide="play-circle" style="width: 16px; height: 16px;"></i> CONTINUE LEARNING
+        </div>
+        <h3 style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">${currentLesson.title}</h3>
+        <div style="font-size: 0.88rem; font-weight: 600; color: #64748b; margin-bottom: 12px;">Lesson ${currentLessonNum} of ${lessons.length}</div>
         
-        let statusClass = "syllabus-locked";
-        let iconName = "lock";
+        <div style="display: flex; align-items: center; gap: 12px; max-width: 320px;">
+          <div style="flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+            <div style="width: ${modulePercent}%; height: 100%; background: linear-gradient(90deg, #2563eb, #7c3aed);"></div>
+          </div>
+          <span style="font-size: 0.82rem; font-weight: 700; color: #2563eb;">${modulePercent}% Completed</span>
+        </div>
+      </div>
+
+      <div>
+        <a href="${continueLessonHash}" class="btn btn-primary" style="padding: 12px 26px; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; background: #2563eb;">
+          Continue Learning &rarr;
+        </a>
+      </div>
+    </div>
+
+    <!-- SECTION 4: LEARNING PATH (SEQUENTIAL SYLLABUS LIST WITH VISUAL STATUSES) -->
+    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 14px; padding: 24px; margin-bottom: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+      <h2 style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="git-branch" style="color: #2563eb;"></i> Learning Path & Lesson Sequence
+      </h2>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        ${lessons.map((les, index) => {
+          const isDone = completedLessons.includes(les.id);
+          const isCurrent = (index === currentIdx);
+          let statusBadge = "";
+          let statusBg = "white";
+          let statusBorder = "#e2e8f0";
+
+          if (isDone) {
+            statusBadge = `<span style="display: inline-flex; align-items: center; gap: 4px; background: #f0fdf4; color: #16a34a; font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; border: 1px solid #bbf7d0;">✓ Completed</span>`;
+          } else if (isCurrent) {
+            statusBadge = `<span style="display: inline-flex; align-items: center; gap: 4px; background: #eff6ff; color: #2563eb; font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; border: 1px solid #bfdbfe;">🔵 In Progress (CURRENT)</span>`;
+            statusBg = "#f8fafc";
+            statusBorder = "#bfdbfe";
+          } else if (index <= currentIdx + 1) {
+            statusBadge = `<span style="display: inline-flex; align-items: center; gap: 4px; background: #f8fafc; color: #64748b; font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 20px; border: 1px solid #e2e8f0;">○ Available</span>`;
+          } else {
+            statusBadge = `<span style="display: inline-flex; align-items: center; gap: 4px; background: #f1f5f9; color: #94a3b8; font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 20px; border: 1px solid #e2e8f0;">🔒 Locked</span>`;
+          }
+
+          return `
+            <div style="background: ${statusBg}; border: 1px solid ${statusBorder}; border-radius: 10px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: ${isDone ? '#16a34a' : (isCurrent ? '#2563eb' : '#cbd5e1')}; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 800;">
+                  ${isDone ? '✓' : index + 1}
+                </div>
+                <div>
+                  <h4 style="font-size: 0.98rem; font-weight: 700; color: #0f172a; margin: 0 0 2px 0;">${les.title}</h4>
+                  <span style="font-size: 0.78rem; color: #64748b;">Lesson ${index + 1} of ${lessons.length}</span>
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 12px;">
+                ${statusBadge}
+                <a href="#/module/${moduleId}/learn/${les.id}" class="btn btn-sm" style="background: ${isCurrent ? '#2563eb' : (isDone ? '#f1f5f9' : 'white')}; color: ${isCurrent ? 'white' : '#334155'}; border: 1px solid #cbd5e1; font-weight: 600; font-size: 0.82rem; border-radius: 6px; text-decoration: none; padding: 6px 14px;">
+                  ${isCurrent ? 'Study Now →' : 'View Lesson'}
+                </a>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- SECTION 5: CATEGORIZED TOPICS GRID -->
+    <div style="margin-bottom: 36px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="layers" style="color: #2563eb;"></i> Categorized Topics & Practice Grid
+        </h2>
         
-        // Logical unlock: first item is unlocked, or previous item is done
-        const isUnlocked = index === 0 || completedLessons.includes(lessons[index-1].id);
-        
-        if (isUnlocked) {
-          statusClass = isLesDone && isPracDone ? "syllabus-completed" : "syllabus-current";
-          iconName = isLesDone && isPracDone ? "check-circle" : "play-circle";
-        }
-        
-        return `
-          <div class="syllabus-item ${statusClass}">
-            <div class="syllabus-left">
-              <span class="status-icon ${isLesDone && isPracDone ? 'completed' : (isUnlocked ? 'current' : 'locked')}">
-                <i data-lucide="${iconName}"></i>
-              </span>
+        <!-- Search Filter Input -->
+        <div style="position: relative; min-width: 240px;">
+          <input type="text" id="module-topic-search" placeholder="Filter topics or algorithms..." style="width: 100%; padding: 8px 12px 8px 36px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; outline: none;">
+          <i data-lucide="search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #94a3b8;"></i>
+        </div>
+      </div>
+
+      <!-- Filter Category Tabs -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;" id="module-filter-tabs">
+        ${categories.map((c, idx) => `
+          <button class="filter-pill-btn ${idx === 0 ? 'active' : ''}" data-cat="${c.id}" style="padding: 6px 16px; border-radius: 20px; border: 1px solid #cbd5e1; background: ${idx === 0 ? '#2563eb' : 'white'}; color: ${idx === 0 ? 'white' : '#475569'}; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+            ${c.label}
+          </button>
+        `).join('')}
+      </div>
+
+      <!-- Topic Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;" id="module-topic-grid">
+        ${lessons.map((les, index) => {
+          const isLesDone = completedLessons.includes(les.id);
+          const cat = getLessonCategory(les.id);
+          const lesNum = (index + 1).toString().padStart(2, '0');
+
+          return `
+            <div class="card topic-card-item" data-category="${cat}" data-title="${les.title.toLowerCase()}" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s, box-shadow 0.2s;">
               <div>
-                <span class="syllabus-title">${les.title}</span>
-                <div style="font-size: 12px; color: var(--text-muted); display: flex; gap: 12px; margin-top: 4px;">
-                  <span style="color: ${isLesDone ? 'var(--color-emerald)' : 'var(--text-muted)'};">Lesson: ${isLesDone ? 'Complete' : 'Pending'}</span>
-                  <span style="color: ${isPracDone ? 'var(--color-emerald)' : 'var(--text-muted)'};">Practice: ${isPracDone ? 'Complete' : 'Pending'}</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <span style="font-size: 0.75rem; font-weight: 800; color: #2563eb; background: #eff6ff; padding: 3px 8px; border-radius: 4px;">TOPIC ${lesNum}</span>
+                  <span style="font-size: 0.75rem; font-weight: 700; color: ${isLesDone ? '#16a34a' : '#94a3b8'}; display: flex; align-items: center; gap: 4px;">
+                    <i data-lucide="${isLesDone ? 'check-circle' : 'circle'}"></i> ${isLesDone ? 'Completed' : 'Pending'}
+                  </span>
+                </div>
+
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; line-height: 1.4;">${les.title}</h3>
+                <p style="font-size: 0.85rem; color: #64748b; line-height: 1.5; margin: 0 0 16px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                  ${les.blocks && les.blocks[0] ? les.blocks[0].content : 'Comprehensive theoretical and practical exploration with numerical algorithm calculations.'}
+                </p>
+              </div>
+
+              <div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+                  <a href="#/module/${moduleId}/learn/${les.id}" class="btn btn-outline btn-sm" style="text-align: center; border-color: #cbd5e1; color: #334155; font-size: 0.82rem; font-weight: 600; text-decoration: none;">
+                    📖 Theory
+                  </a>
+                  <a href="#/module/${moduleId}/practice/${les.id}" class="btn btn-outline btn-sm" style="text-align: center; border-color: #cbd5e1; color: #334155; font-size: 0.82rem; font-weight: 600; text-decoration: none;">
+                    ✏️ Quiz Practice
+                  </a>
+                </div>
+                <div style="margin-top: 8px;">
+                  <a href="#/numerical-solver" class="btn btn-sm" style="background: #f1f5f9; color: #1e293b; text-align: center; font-size: 0.8rem; font-weight: 600; text-decoration: none; border-radius: 6px; padding: 6px; display: block; width: 100%;">
+                    ⚡ Solve Math
+                  </a>
                 </div>
               </div>
             </div>
-            
-            <div class="syllabus-right">
-              ${isUnlocked ? `
-                <a href="#/module/${moduleId}/learn/${les.id}" class="btn btn-outline btn-sm">Study</a>
-                ${isLesDone ? `
-                  <a href="#/module/${moduleId}/practice/${les.id}" class="btn ${isPracDone ? 'btn-outline' : 'btn-primary'} btn-sm">Practice</a>
-                ` : ``}
-              ` : `
-                <span style="font-size: 12px; color: var(--text-muted);">Study previous lesson to unlock</span>
-              `}
+          `;
+        }).join('')}
+      </div>
+    </div>
+
+
+
+    <!-- SECTION 6: NUMERICAL PRACTICE CARDS -->
+    <div style="margin-bottom: 36px;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="calculator" style="color: #16a34a;"></i> Algorithm-Based Numerical Solver Cards
+      </h2>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px;">
+          <h4 style="font-size: 0.98rem; font-weight: 700; color: #166534; margin: 0 0 6px 0;">Entropy & Info Gain Solver</h4>
+          <p style="font-size: 0.82rem; color: #15803d; line-height: 1.4; margin: 0 0 12px 0;">Compute target entropy H(S), attribute expected entropy H(S, A), and Information Gain I(S, A).</p>
+          <a href="#/numerical-solver" class="btn btn-sm" style="background: #16a34a; color: white; font-weight: 700; text-decoration: none; display: inline-block;">Solve Problem &rarr;</a>
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px;">
+          <h4 style="font-size: 0.98rem; font-weight: 700; color: #166534; margin: 0 0 6px 0;">K-Means Iteration Solver</h4>
+          <p style="font-size: 0.82rem; color: #15803d; line-height: 1.4; margin: 0 0 12px 0;">Compute Euclidean distances d = sqrt((x2-x1)^2 + (y2-y1)^2) and update cluster centroid coordinates.</p>
+          <a href="#/numerical-solver" class="btn btn-sm" style="background: #16a34a; color: white; font-weight: 700; text-decoration: none; display: inline-block;">Solve Problem &rarr;</a>
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px;">
+          <h4 style="font-size: 0.98rem; font-weight: 700; color: #166534; margin: 0 0 6px 0;">Apriori Support & Confidence</h4>
+          <p style="font-size: 0.82rem; color: #15803d; line-height: 1.4; margin: 0 0 12px 0;">Compute itemset Support count, Rule Confidence % and Lift metrics with minimum threshold pruning.</p>
+          <a href="#/numerical-solver" class="btn btn-sm" style="background: #16a34a; color: white; font-weight: 700; text-decoration: none; display: inline-block;">Solve Problem &rarr;</a>
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px;">
+          <h4 style="font-size: 0.98rem; font-weight: 700; color: #166534; margin: 0 0 6px 0;">Data Normalization (Min-Max / Z-Score)</h4>
+          <p style="font-size: 0.82rem; color: #15803d; line-height: 1.4; margin: 0 0 12px 0;">Transform raw attribute values v using Min-Max [new_min, new_max] or Z-Score (v - mean) / std_dev.</p>
+          <a href="#/numerical-solver" class="btn btn-sm" style="background: #16a34a; color: white; font-weight: 700; text-decoration: none; display: inline-block;">Solve Problem &rarr;</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 7: DEMO / VISUAL LEARNING -->
+    <div style="margin-bottom: 36px;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="monitor" style="color: #6366f1;"></i> Visual Simulators & Interactive Tools
+      </h2>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+        <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.2rem;">
+              <i data-lucide="box"></i>
             </div>
+            <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">OLAP 3D Cube Visualizer</h3>
+            <p style="font-size: 0.85rem; color: #64748b; line-height: 1.4; margin-bottom: 16px;">Visualize multidimensional cubes across Time, Location, and Product dimensions.</p>
           </div>
-        `;
-      }).join('')}
-      
-      <!-- Live Demo node -->
-      <div class="syllabus-item ${completedLessons.length === lessons.length ? (completedDemos.length > 0 ? 'syllabus-completed' : 'syllabus-current') : 'syllabus-locked'}">
-        <div class="syllabus-left">
-          <span class="status-icon ${completedDemos.length > 0 ? 'completed' : (completedLessons.length === lessons.length ? 'current' : 'locked')}">
-            <i data-lucide="${completedDemos.length > 0 ? 'check-circle' : 'play-circle'}"></i>
-          </span>
-          <div>
-            <span class="syllabus-title">Guided Live Demo Simulator</span>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Interactive guided tool practice simulating realistic scenarios.</p>
-          </div>
+          <a href="#/olap-visualizer" class="btn btn-outline" style="text-align: center; font-weight: 600; text-decoration: none; display: block; border-color: #cbd5e1; color: #334155;">Launch Visualizer &rarr;</a>
         </div>
-        <div class="syllabus-right">
-          ${completedLessons.length === lessons.length ? `
-            <a href="#/module/${moduleId}/demo" class="btn btn-primary btn-sm">Launch Demo</a>
-          ` : `
-            <span style="font-size: 12px; color: var(--text-muted);">Complete all lessons to unlock</span>
-          `}
+
+        <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: #fce7f3; color: #be185d; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.2rem;">
+              <i data-lucide="bar-chart"></i>
+            </div>
+            <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">Exploratory Data Analysis (EDA)</h3>
+            <p style="font-size: 0.85rem; color: #64748b; line-height: 1.4; margin-bottom: 16px;">Inspect boxplots, scatter matrices, correlation maps, and summary statistics.</p>
+          </div>
+          <a href="#/data-exploration" class="btn btn-outline" style="text-align: center; font-weight: 600; text-decoration: none; display: block; border-color: #cbd5e1; color: #334155;">Launch EDA Demo &rarr;</a>
+        </div>
+
+        <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: #ccfbf1; color: #0f766e; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.2rem;">
+              <i data-lucide="terminal"></i>
+            </div>
+            <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">SQL Staging Playground</h3>
+            <p style="font-size: 0.85rem; color: #64748b; line-height: 1.4; margin-bottom: 16px;">Write and execute SQL queries against relational staging tables.</p>
+          </div>
+          <a href="#/sql-sandbox" class="btn btn-outline" style="text-align: center; font-weight: 600; text-decoration: none; display: block; border-color: #cbd5e1; color: #334155;">Launch SQL Playground &rarr;</a>
         </div>
       </div>
-      
-      <!-- Comprehensive Quiz node -->
-      <div class="syllabus-item ${completedDemos.length > 0 ? (completedQuizzes.length > 0 ? 'syllabus-completed' : 'syllabus-current') : 'syllabus-locked'}">
-        <div class="syllabus-left">
-          <span class="status-icon ${completedQuizzes.length > 0 ? 'completed' : (completedDemos.length > 0 ? 'current' : 'locked')}">
-            <i data-lucide="award"></i>
-          </span>
-          <div>
-            <span class="syllabus-title">Comprehensive Module Quiz</span>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Test your knowledge of all topics in this module to earn your badge.</p>
-          </div>
-        </div>
-        <div class="syllabus-right">
-          ${completedDemos.length > 0 ? `
-            <a href="#/module/${moduleId}/quiz" class="btn btn-primary btn-sm">Take Quiz</a>
-          ` : `
-            <span style="font-size: 12px; color: var(--text-muted);">Complete Live Demo to unlock</span>
-          `}
-        </div>
+    </div>
+
+    <!-- SECTION 8: QUIZ / ASSESSMENT -->
+    <div style="background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); border-radius: 16px; padding: 24px; color: white; margin-bottom: 36px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+      <div>
+        <span style="background: rgba(255,255,255,0.2); font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; text-transform: uppercase;">Module Knowledge Assessment</span>
+        <h3 style="font-size: 1.3rem; font-weight: 800; margin: 8px 0 4px 0; color: white;">Comprehensive ${title} Quiz</h3>
+        <p style="font-size: 0.9rem; opacity: 0.9; margin: 0;">Test your understanding of algorithms, formulas, and concepts to earn your achievement badge.</p>
       </div>
-      
+      <div>
+        <a href="#/module/${moduleId}/quiz" class="btn" style="background: white; color: #4f46e5; font-weight: 700; padding: 12px 24px; border-radius: 8px; text-decoration: none; display: inline-block;">
+          Start Assessment Quiz &rarr;
+        </a>
+      </div>
+    </div>
+
+    <!-- SECTION 9: MODULE RESOURCES -->
+    <div style="margin-bottom: 36px;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="file-text" style="color: #64748b;"></i> Reference Materials & Formula Sheets
+      </h2>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+        <a href="#/resources" style="text-decoration: none; background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; display: flex; align-items: center; gap: 12px; color: #1e293b;">
+          <i data-lucide="bookmark" style="color: #2563eb;"></i>
+          <div>
+            <div style="font-weight: 700; font-size: 0.9rem;">Cheat Sheet</div>
+            <div style="font-size: 0.78rem; color: #64748b;">Algorithms & Formulas</div>
+          </div>
+        </a>
+
+        <a href="#/notes" style="text-decoration: none; background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; display: flex; align-items: center; gap: 12px; color: #1e293b;">
+          <i data-lucide="file-spread-sheet" style="color: #16a34a;"></i>
+          <div>
+            <div style="font-weight: 700; font-size: 0.9rem;">My Notes</div>
+            <div style="font-size: 0.78rem; color: #64748b;">Saved study notes</div>
+          </div>
+        </a>
+
+        <a href="#/demo-videos" style="text-decoration: none; background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; display: flex; align-items: center; gap: 12px; color: #1e293b;">
+          <i data-lucide="play-circle" style="color: #dc2626;"></i>
+          <div>
+            <div style="font-weight: 700; font-size: 0.9rem;">Video Tutorials</div>
+            <div style="font-size: 0.78rem; color: #64748b;">Recorded walkthroughs</div>
+          </div>
+        </a>
+      </div>
     </div>
   `;
+
+  // Attach real-time filter tab handlers and search handlers
+  setTimeout(() => {
+    if (window.lucide) window.lucide.createIcons();
+
+    // Category Filter Pills Handler
+    const filterTabs = container.querySelectorAll('.filter-pill-btn');
+    const topicCards = container.querySelectorAll('.topic-card-item');
+
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        filterTabs.forEach(t => {
+          t.classList.remove('active');
+          t.style.background = 'white';
+          t.style.color = '#475569';
+        });
+        tab.classList.add('active');
+        tab.style.background = '#2563eb';
+        tab.style.color = 'white';
+
+        const cat = tab.getAttribute('data-cat');
+        topicCards.forEach(card => {
+          const cardCat = card.getAttribute('data-category');
+          if (cat === 'all' || cardCat === cat) {
+            card.style.display = 'flex';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // Topic Search Filter Handler
+    const searchInput = container.querySelector('#module-topic-search');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        topicCards.forEach(card => {
+          const titleText = card.getAttribute('data-title') || '';
+          if (!query || titleText.includes(query)) {
+            card.style.display = 'flex';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    }
+  }, 50);
 }
 
 function renderLessonReaderView(container, moduleId, lessonId) {
@@ -1334,9 +1812,12 @@ function renderLessonReaderView(container, moduleId, lessonId) {
     return;
   }
   
-  // Left Sidebar outline links
+  // Progress calculations
   const completedLessons = state.progress.filter(x => x.module_id === moduleId && x.type === 'lesson').map(x => x.topic_id);
-  
+  const isCurrentComplete = completedLessons.includes(lessonId);
+  const lessonPct = Math.round(((lessonIndex + 1) / lessons.length) * 100);
+  const moduleTitle = moduleId === 'warehouse' ? 'Data Warehousing' : (moduleId === 'mining' ? 'Data Mining' : 'Module');
+
   let thirdTabHtml = "";
   let thirdPanelHtml = "";
   if (lessonId === 'star-schema') {
@@ -1424,10 +1905,51 @@ function renderLessonReaderView(container, moduleId, lessonId) {
       </div>
     `;
   }
-  
+
+  const prevLesson = lessonIndex > 0 ? lessons[lessonIndex - 1] : null;
+  const nextLesson = lessonIndex < lessons.length - 1 ? lessons[lessonIndex + 1] : null;
+
   container.innerHTML = `
+    <!-- BREADCRUMB NAVIGATION -->
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">
+      <a href="#/dashboard" style="color: #2563eb; font-weight: 600; text-decoration: none;">Home</a>
+      <span>&rsaquo;</span>
+      <a href="#/module/${moduleId}" style="color: #2563eb; font-weight: 600; text-decoration: none;">${moduleTitle}</a>
+      <span>&rsaquo;</span>
+      <span style="color: #0f172a; font-weight: 700;">${lesson.title}</span>
+    </div>
+
+    <!-- DYNAMIC LESSON HEADER & PROGRESS DISPLAY -->
+    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+        <span style="background: #eff6ff; color: #2563eb; font-size: 0.8rem; font-weight: 800; padding: 4px 12px; border-radius: 20px; border: 1px solid #bfdbfe;">
+          Lesson ${lessonIndex + 1} of ${lessons.length}
+        </span>
+        ${isCurrentComplete ? `
+          <span style="background: #f0fdf4; color: #16a34a; font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 4px;">
+            <i data-lucide="check-circle-2" style="width: 14px; height: 14px;"></i> Completed
+          </span>
+        ` : `
+          <span style="background: #f8fafc; color: #64748b; font-size: 0.8rem; font-weight: 600; padding: 4px 12px; border-radius: 20px; border: 1px solid #e2e8f0;">
+            In Progress
+          </span>
+        `}
+      </div>
+
+      <h1 style="font-size: 1.8rem; font-weight: 800; color: #0f172a; margin: 0 0 16px 0;">${lesson.title}</h1>
+
+      <!-- Progress Bar Display -->
+      <div style="display: flex; align-items: center; gap: 14px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 18px; border-radius: 10px;">
+        <span style="font-size: 0.85rem; font-weight: 700; color: #334155;">Lesson Progress:</span>
+        <div style="flex: 1; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden;">
+          <div style="width: ${lessonPct}%; height: 100%; background: linear-gradient(90deg, #2563eb, #7c3aed); transition: width 0.4s ease;"></div>
+        </div>
+        <span style="font-size: 0.9rem; font-weight: 800; color: #2563eb;">${lessonPct}%</span>
+      </div>
+    </div>
+
     <div class="lesson-layout animate-slide-up">
-      <!-- Lesson Navigation Outline -->
+      <!-- Lesson Navigation Sidebar Outline -->
       <aside class="lesson-sidebar">
         <h3 class="lesson-sidebar-title">Lessons Outline</h3>
         <div class="lesson-sidebar-list">
@@ -1441,9 +1963,6 @@ function renderLessonReaderView(container, moduleId, lessonId) {
       
       <!-- Lesson Main Content -->
       <article class="lesson-main">
-        <div class="lesson-title-meta">${moduleId.toUpperCase()} — Lesson ${lessonIndex + 1} of ${lessons.length}</div>
-        <h1 class="lesson-heading">${lesson.title}</h1>
-        
         <!-- Tab Controls -->
         <div class="lesson-tabs">
           <button class="tab-btn active" id="tab-btn-theory">
@@ -1457,13 +1976,15 @@ function renderLessonReaderView(container, moduleId, lessonId) {
           ${thirdTabHtml}
         </div>
         
-        <!-- Panel 1: Written Theory -->
+        <!-- Panel 1: Written Theory Content with Educational Cards -->
         <div id="panel-theory" class="lesson-body">
           ${lesson.blocks.map(b => {
             if (b.type === 'table') {
               return `
-                <div class="block-table">
-                  <div class="block-table-title">${b.title}</div>
+                <div class="block-table" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                  <div class="block-table-title" style="font-weight: 700; font-size: 1rem; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    📋 TABLE: ${b.title}
+                  </div>
                   <div class="table-scroll-container">
                     <table class="theory-table">
                       <thead>
@@ -1478,41 +1999,126 @@ function renderLessonReaderView(container, moduleId, lessonId) {
               `;
             }
             
-            // Format block headers matching icons
+            // Format educational concept headers & card styling
             let blockClass = "";
-            let blockIcon = "";
-            if (b.type === 'key-concept') { blockClass = "block-key-concept"; blockIcon = "💡 Key Concept"; }
-            else if (b.type === 'definition') { blockClass = "block-definition"; blockIcon = "📌 Definition"; }
-            else if (b.type === 'example') { blockClass = "block-example"; blockIcon = "🔍 Example"; }
-            else if (b.type === 'remember') { blockClass = "block-remember"; blockIcon = "⭐ Remember"; }
+            let blockBadge = "📖 CONCEPT";
+            let badgeBg = "#eff6ff";
+            let badgeColor = "#2563eb";
+            
+            const lowerContent = (b.content || '').toLowerCase();
+            const lowerTitle = (b.title || '').toLowerCase();
+            const isFormula = b.type === 'formula' || lowerTitle.includes('formula') || lowerContent.includes('formula') || lowerContent.includes('h(s)') || lowerContent.includes('sqrt') || lowerContent.includes('p(c|x)');
+
+            if (isFormula) {
+              blockClass = "block-formula";
+              blockBadge = "📐 FORMULA";
+              badgeBg = "#f0fdf4";
+              badgeColor = "#16a34a";
+            } else if (b.type === 'key-concept') {
+              blockClass = "block-key-concept";
+              blockBadge = "💡 KEY CONCEPT";
+              badgeBg = "#fef3c7";
+              badgeColor = "#d97706";
+            } else if (b.type === 'definition') {
+              blockClass = "block-definition";
+              blockBadge = "📖 CONCEPT";
+              badgeBg = "#eff6ff";
+              badgeColor = "#2563eb";
+            } else if (b.type === 'example') {
+              blockClass = "block-example";
+              blockBadge = "📊 EXAMPLE";
+              badgeBg = "#fce7f3";
+              badgeColor = "#be185d";
+            } else if (b.type === 'remember') {
+              blockClass = "block-remember";
+              blockBadge = "🧠 REMEMBER";
+              badgeBg = "#faf5ff";
+              badgeColor = "#9333ea";
+            }
             
             return `
-              <div class="learning-block ${blockClass}">
-                <div class="learning-block-header">${blockIcon}: ${b.title || ''}</div>
-                <p class="learning-block-content">${b.content}</p>
+              <div class="learning-block ${blockClass}" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 22px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                  <span style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 4px; letter-spacing: 0.5px;">${blockBadge}</span>
+                  <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0;">${b.title || ''}</h3>
+                </div>
+                <p class="learning-block-content" style="color: #334155; font-size: 0.95rem; line-height: 1.6; margin: 0; white-space: pre-line;">${b.content}</p>
               </div>
             `;
           }).join('')}
         </div>
         
-        <!-- Panel 2: Simulated Animated Video Lecture -->
+        <!-- Panel 2: Simulated Video Lecture -->
         <div id="panel-video" class="lesson-body hidden">
           <div id="video-player-mount"></div>
         </div>
         
-        <!-- Panel 3: Interactive Sandbox (Dynamic) -->
+        <!-- Panel 3: Interactive Sandbox -->
         ${thirdPanelHtml}
         
-        <!-- Lesson Transition & Nav buttons -->
-        <div class="lesson-nav">
-          ${lessonIndex > 0 ? `
-            <a href="#/module/${moduleId}/learn/${lessons[lessonIndex-1].id}" class="btn btn-outline">&larr; Previous</a>
+        <!-- LESSON COMPLETION & BOTTOM NAVIGATION BUTTONS -->
+        <div class="lesson-nav" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 32px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+          ${prevLesson ? `
+            <a href="#/module/${moduleId}/learn/${prevLesson.id}" class="btn btn-outline" style="border-color: #cbd5e1; color: #334155; font-weight: 600; text-decoration: none;">
+              &larr; Previous Lesson
+            </a>
           ` : `<span></span>`}
-          
-          <button class="btn btn-primary" id="btn-mark-complete-lesson">
-            ${completedLessons.includes(lessonId) ? 'Read Again & Practice &rarr;' : 'Mark Read & Practice &rarr;'}
+
+          <button class="btn btn-primary" id="btn-mark-complete-lesson" style="background: ${isCurrentComplete ? '#16a34a' : '#2563eb'}; color: white; font-weight: 700; padding: 12px 24px; border-radius: 8px;">
+            ${isCurrentComplete ? '✓ Completed (Read Again & Practice &rarr;)' : '✓ Mark as Complete & Practice &rarr;'}
           </button>
+
+          ${nextLesson ? `
+            <a href="#/module/${moduleId}/learn/${nextLesson.id}" class="btn btn-primary" style="background: #4f46e5; color: white; font-weight: 700; text-decoration: none; padding: 10px 20px; border-radius: 8px;">
+              Next Lesson &rarr;
+            </a>
+          ` : `
+            <a href="#/module/${moduleId}" class="btn btn-outline" style="border-color: #cbd5e1; color: #334155; font-weight: 600; text-decoration: none;">
+              Finish Module &rarr;
+            </a>
+          `}
         </div>
+
+        <!-- LEARNING FLOW: CONNECTED ACTION PIPELINE CARDS -->
+        <div style="margin-top: 40px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 24px;">
+          <div style="font-size: 0.8rem; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px;">
+            LEARNING FLOW PIPELINE
+          </div>
+          <h3 style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0 0 18px 0;">What to do after completing this lesson?</h3>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+            <!-- 1. PRACTICE QUIZ -->
+            <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-weight: 800;">
+                  ✏️
+                </div>
+                <div style="font-size: 0.75rem; font-weight: 800; color: #2563eb; text-transform: uppercase; margin-bottom: 2px;">READY TO PRACTICE?</div>
+                <h4 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">TEST YOUR UNDERSTANDING</h4>
+                <p style="font-size: 0.82rem; color: #64748b; line-height: 1.4; margin-bottom: 16px;">Check what you learned from this lesson with interactive practice questions.</p>
+              </div>
+              <a href="#/module/${moduleId}/practice/${lessonId}" class="btn btn-primary btn-sm" style="background: #2563eb; color: white; text-align: center; font-weight: 700; text-decoration: none; display: block; border-radius: 6px; padding: 8px;">
+                Start Practice &rarr;
+              </a>
+            </div>
+
+            <!-- 3. NUMERICAL SOLVER -->
+            <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-weight: 800;">
+                  📐
+                </div>
+                <div style="font-size: 0.75rem; font-weight: 800; color: #16a34a; text-transform: uppercase; margin-bottom: 2px;">EXAM NUMERICALS</div>
+                <h4 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">TRY A NUMERICAL</h4>
+                <p style="font-size: 0.82rem; color: #64748b; line-height: 1.4; margin-bottom: 16px;">Solve step-by-step mathematical examination questions with formulas & tables.</p>
+              </div>
+              <a href="#/numerical-solver" class="btn btn-sm" style="background: #16a34a; color: white; text-align: center; font-weight: 700; text-decoration: none; display: block; border-radius: 6px; padding: 8px;">
+                Open Numerical Solver &rarr;
+              </a>
+            </div>
+          </div>
+        </div>
+
       </article>
     </div>
   `;
@@ -1640,22 +2246,24 @@ function renderPracticeView(container, moduleId, lessonId) {
   renderPracticeQuestion('#app', lessonId, async () => {
     try {
       const res = await api.post('/api/progress', { moduleId, topicId: lessonId, type: 'practice' });
-      state.progress = res.progress;
-      updateGlobalHeaderStats();
+      if (res && res.progress) {
+        state.progress = res.progress;
+        updateGlobalHeaderStats();
+      }
       
-      if (res.newlyUnlocked && res.newlyUnlocked.length > 0) {
+      if (res && res.newlyUnlocked && res.newlyUnlocked.length > 0) {
         res.newlyUnlocked.forEach(badgeId => {
           state.achievements.push({ achievement_id: badgeId });
           showUnlockToast(badgeId);
         });
       }
-      
-      // Next step logic: Go back to module landing to see unlocked next syllabus line
-      window.location.hash = `#/module/${moduleId}`;
     } catch (err) {
-      console.error(err);
+      console.warn('Progress sync note:', err);
+    } finally {
+      // Guaranteed navigation back to module landing
+      window.location.hash = `#/module/${moduleId}`;
     }
-  });
+  }, moduleId);
 }
 
 function renderLiveDemoView(container, moduleId) {

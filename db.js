@@ -18,7 +18,7 @@ const mockDb = {
   challenges: []
 };
 
-// Function to auto-initialize DB schema if tables are missing
+// Safe non-destructive schema initialization (preserves all existing tables and data)
 const initDbSchema = async (dbPool) => {
   try {
     const res = await dbPool.query(`
@@ -30,14 +30,49 @@ const initDbSchema = async (dbPool) => {
     `);
     const exists = res.rows[0].exists;
     if (!exists) {
-      console.log('⚙️ Database tables not found. Initializing schema from schema.sql...');
-      const schemaSqlPath = path.join(process.cwd(), 'schema.sql');
-      const schemaSql = fs.readFileSync(schemaSqlPath, 'utf8');
-      await dbPool.query(schemaSql);
-      console.log('✅ Database schema initialized successfully!');
+      console.log('⚙️ Initializing database tables non-destructively...');
+      await dbPool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            xp INTEGER DEFAULT 0,
+            level INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS user_progress (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            module_id VARCHAR(50) NOT NULL,
+            topic_id VARCHAR(100) NOT NULL,
+            type VARCHAR(20) NOT NULL,
+            completed BOOLEAN DEFAULT TRUE,
+            completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT unique_user_progress UNIQUE (user_id, module_id, topic_id, type)
+        );
+        CREATE TABLE IF NOT EXISTS user_achievements (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            achievement_id VARCHAR(50) NOT NULL,
+            unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT unique_user_achievement UNIQUE (user_id, achievement_id)
+        );
+        CREATE TABLE IF NOT EXISTS user_challenges (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            challenge_id VARCHAR(50) NOT NULL,
+            completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT unique_user_challenge UNIQUE (user_id, challenge_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_user_progress_user ON user_progress(user_id);
+        CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id);
+        CREATE INDEX IF NOT EXISTS idx_user_challenges_user ON user_challenges(user_id);
+      `);
+      console.log('✅ Database schema initialized successfully (no tables dropped).');
     }
   } catch (err) {
-    console.error('❌ Failed to initialize database schema:', err.message);
+    console.error('❌ Failed to verify database schema:', err.message);
   }
 };
 
@@ -127,6 +162,15 @@ const handleMockQuery = async (text, params) => {
   // 2. User Progress SQL Handles
   if (cleanSql.includes('select * from user_progress where user_id =')) {
     const userId = parseInt(params[0]);
+    if (cleanSql.includes('module_id =') && params.length >= 4) {
+      const moduleId = params[1];
+      const topicId = params[2];
+      const type = params[3];
+      const records = mockDb.progress.filter(
+        p => p.user_id === userId && p.module_id === moduleId && p.topic_id === topicId && p.type === type
+      );
+      return { rows: records };
+    }
     const records = mockDb.progress.filter(p => p.user_id === userId);
     return { rows: records };
   }
@@ -154,6 +198,11 @@ const handleMockQuery = async (text, params) => {
   // 3. User Achievements SQL Handles
   if (cleanSql.includes('select * from user_achievements where user_id =')) {
     const userId = parseInt(params[0]);
+    if (cleanSql.includes('achievement_id =') && params.length >= 2) {
+      const achId = params[1];
+      const records = mockDb.achievements.filter(a => a.user_id === userId && a.achievement_id === achId);
+      return { rows: records };
+    }
     const records = mockDb.achievements.filter(a => a.user_id === userId);
     return { rows: records };
   }
@@ -176,6 +225,11 @@ const handleMockQuery = async (text, params) => {
   // 4. User Challenges SQL Handles
   if (cleanSql.includes('select * from user_challenges where user_id =')) {
     const userId = parseInt(params[0]);
+    if (cleanSql.includes('challenge_id =') && params.length >= 2) {
+      const challengeId = params[1];
+      const records = mockDb.challenges.filter(c => c.user_id === userId && c.challenge_id === challengeId);
+      return { rows: records };
+    }
     const records = mockDb.challenges.filter(c => c.user_id === userId);
     return { rows: records };
   }
@@ -194,8 +248,19 @@ const handleMockQuery = async (text, params) => {
     }
     return { rows: [record] };
   }
+
+  // Generic transaction support for tests
+  if (cleanSql === 'begin' || cleanSql === 'commit' || cleanSql === 'rollback') {
+    return { rows: [] };
+  }
   
   return { rows: [] };
 };
 
 export const getMockStatus = () => isMockMode;
+export const resetMockDbForTesting = () => {
+  mockDb.users = [];
+  mockDb.progress = [];
+  mockDb.achievements = [];
+  mockDb.challenges = [];
+};

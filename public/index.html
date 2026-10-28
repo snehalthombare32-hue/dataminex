@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DataMineX — Interactive Learning Platform</title>
+  <title>DataMineX — Interactive Virtual Lab for Data Warehousing & Data Mining</title>
   <!-- SEO Meta Tags -->
-  <meta name="description" content="Learn Data Warehousing, Data Mining, and Data Analytics through hands-on lessons, guided live demos, practicals, and real-world challenges.">
+  <meta name="description" content="DataMineX — An Interactive Virtual Lab for Data Warehousing and Data Mining with Algorithm-Based Numerical Solving.">
   
   <!-- Premium Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,110 +21,320 @@
 </head>
 <body>
 
+  <!-- Mobile Overlay Backdrop -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
   <!-- App Wrapper -->
   <div id="root" class="auth-layout">
     
-    <!-- Sidebar (Hidden on Auth/Login screens, visible on Dashboard/Learning screens) -->
+    <!-- Animated Collapsible Sidebar -->
     <aside id="sidebar" class="sidebar hidden">
+      <!-- Sidebar Header & Logo -->
       <div class="sidebar-header">
         <div class="logo">
-          <span class="logo-icon">📊</span>
-          <span class="logo-text">DataMineX</span>
+          <div class="logo-icon-wrapper">
+            <span class="logo-icon">📊</span>
+          </div>
+          <div class="logo-text-wrapper">
+            <span class="logo-text">DataMineX</span>
+            <span class="logo-subtext">Interactive Virtual Lab</span>
+          </div>
         </div>
-        <button id="sidebar-close" class="mobile-only-btn" aria-label="Close menu">
+        
+        <!-- Desktop Collapse Button -->
+        <button id="desktop-collapse-btn" class="sidebar-icon-btn desktop-only-btn" title="Toggle Sidebar (Expand / Collapse)">
+          <i data-lucide="chevron-left" id="collapse-icon"></i>
+        </button>
+
+        <!-- Mobile Close Button -->
+        <button id="sidebar-close" class="sidebar-icon-btn mobile-only-btn" aria-label="Close menu">
           <i data-lucide="x"></i>
         </button>
       </div>
+
+      <!-- Quick Search Trigger -->
+      <div class="sidebar-search-wrapper">
+        <button id="sidebar-search-btn" class="sidebar-search-trigger" title="Search Menu (Ctrl + K)">
+          <i data-lucide="search" class="search-trigger-icon"></i>
+          <span class="search-trigger-text">Search menu...</span>
+          <kbd class="search-trigger-kbd">Ctrl K</kbd>
+        </button>
+      </div>
       
+      <!-- Sidebar Navigation Menu -->
       <nav class="sidebar-nav">
-        <a href="#/dashboard" class="nav-item active" id="nav-dashboard">
-          <i data-lucide="home"></i>
-          <span>Home</span>
-        </a>
-        <a href="#/module/warehouse" class="nav-item" id="nav-warehouse">
-          <i data-lucide="database"></i>
-          <span>Data Warehousing</span>
-        </a>
-        <a href="#/module/mining" class="nav-item" id="nav-mining">
-          <i data-lucide="cpu"></i>
-          <span>Data Mining</span>
-        </a>
-        <a href="#/numerical-solver" class="nav-item" id="nav-numerical-solver">
-          <i data-lucide="calculator"></i>
-          <span>Numerical Solver</span>
-        </a>
-        <a href="#/practical-lab" class="nav-item" id="nav-practical-lab">
-          <i data-lucide="flask-conical"></i>
-          <span>Practical Lab</span>
-        </a>
-        <a href="#/demo-videos" class="nav-item" id="nav-demo-videos">
-          <i data-lucide="play-circle"></i>
-          <span>Demo Videos</span>
-        </a>
-        <a href="#/ai-assistant" class="nav-item" id="nav-ai-assistant">
-          <i data-lucide="bot"></i>
-          <span>AI Assistant</span>
-        </a>
+        
+        <!-- GROUP 1: WORKSPACE -->
+        <div class="nav-group">
+          <div class="nav-group-title">WORKSPACE</div>
 
-        <div class="nav-separator"></div>
+          <a href="#/dashboard" class="nav-item active" id="nav-dashboard" data-tooltip="Dashboard">
+            <i data-lucide="home"></i>
+            <span class="nav-label">Dashboard</span>
+          </a>
 
-        <a href="#/progress" class="nav-item" id="nav-progress">
-          <i data-lucide="trending-up"></i>
-          <span>Quiz &amp; Progress</span>
-        </a>
-        <a href="#/notes" class="nav-item" id="nav-notes">
-          <i data-lucide="book-marked"></i>
-          <span>My Notes</span>
-        </a>
-        <a href="#/resources" class="nav-item" id="nav-resources">
-          <i data-lucide="library"></i>
-          <span>Resources</span>
-        </a>
+          <!-- Accordion 1: Data Warehousing -->
+          <div class="nav-accordion" id="accordion-warehouse">
+            <div class="nav-item nav-accordion-header" id="nav-warehouse-header" data-tooltip="Data Warehousing">
+              <a href="#/module/warehouse" class="nav-item-link" id="nav-warehouse">
+                <i data-lucide="database"></i>
+                <span class="nav-label">Data Warehousing</span>
+              </a>
+              <button type="button" class="accordion-arrow-btn" id="toggle-warehouse" aria-label="Toggle Data Warehousing Submenu" title="Expand / Collapse Submenu">
+                <i data-lucide="chevron-down" class="accordion-arrow"></i>
+              </button>
+            </div>
+            <div class="accordion-content" id="content-warehouse">
+              <a href="#/module/warehouse" class="nav-subitem" id="nav-wh-overview">
+                <span class="dot-indicator"></span>
+                <span>Overview &amp; Syllabus</span>
+              </a>
+              <a href="#/module/warehouse/learn/intro-warehouse" class="nav-subitem" id="nav-wh-intro">
+                <span class="dot-indicator"></span>
+                <span>Introduction</span>
+              </a>
+              <a href="#/module/warehouse/learn/architecture" class="nav-subitem" id="nav-wh-arch">
+                <span class="dot-indicator"></span>
+                <span>Architecture</span>
+              </a>
+              <a href="#/module/warehouse/learn/oltp-vs-olap" class="nav-subitem" id="nav-wh-oltp">
+                <span class="dot-indicator"></span>
+                <span>OLTP vs OLAP</span>
+              </a>
+              <a href="#/module/warehouse/learn/etl-process" class="nav-subitem" id="nav-wh-etl">
+                <span class="dot-indicator"></span>
+                <span>ETL Process</span>
+              </a>
+              <a href="#/module/warehouse/learn/fact-dimension" class="nav-subitem" id="nav-wh-fact-dim">
+                <span class="dot-indicator"></span>
+                <span>Fact &amp; Dimension Tables</span>
+              </a>
+              <a href="#/module/warehouse/learn/star-schema" class="nav-subitem" id="nav-wh-star">
+                <span class="dot-indicator"></span>
+                <span>Star Schema</span>
+              </a>
+              <a href="#/module/warehouse/learn/snowflake-schema" class="nav-subitem" id="nav-wh-snowflake">
+                <span class="dot-indicator"></span>
+                <span>Snowflake Schema</span>
+              </a>
+              <a href="#/module/warehouse/learn/olap-operations" class="nav-subitem" id="nav-wh-olap">
+                <span class="dot-indicator"></span>
+                <span>OLAP Operations</span>
+              </a>
+              <a href="#/module/warehouse/learn/dwh-vs-datamart" class="nav-subitem" id="nav-wh-mart">
+                <span class="dot-indicator"></span>
+                <span>DWH vs Data Mart</span>
+              </a>
+              <a href="#/module/warehouse/learn/fact-constellation" class="nav-subitem" id="nav-wh-constellation">
+                <span class="dot-indicator"></span>
+                <span>Fact Constellation</span>
+              </a>
+              <a href="#/module/warehouse/learn/factless-fact-table" class="nav-subitem" id="nav-wh-factless">
+                <span class="dot-indicator"></span>
+                <span>Factless Fact Table</span>
+              </a>
+              <a href="#/module/warehouse/learn/aggregate-fact-table" class="nav-subitem" id="nav-wh-aggregate">
+                <span class="dot-indicator"></span>
+                <span>Aggregate Fact Table</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Accordion 2: Data Mining -->
+          <div class="nav-accordion" id="accordion-mining">
+            <div class="nav-item nav-accordion-header" id="nav-mining-header" data-tooltip="Data Mining">
+              <a href="#/module/mining" class="nav-item-link" id="nav-mining">
+                <i data-lucide="cpu"></i>
+                <span class="nav-label">Data Mining</span>
+              </a>
+              <button type="button" class="accordion-arrow-btn" id="toggle-mining" aria-label="Toggle Data Mining Submenu" title="Expand / Collapse Submenu">
+                <i data-lucide="chevron-down" class="accordion-arrow"></i>
+              </button>
+            </div>
+            <div class="accordion-content" id="content-mining">
+              <a href="#/module/mining" class="nav-subitem" id="nav-dm-overview">
+                <span class="dot-indicator"></span>
+                <span>Overview &amp; Syllabus</span>
+              </a>
+
+              <div class="nav-subgroup-title">PREPROCESSING &amp; EDA</div>
+              <a href="#/module/mining/learn/intro-mining" class="nav-subitem" id="nav-dm-intro">
+                <span class="dot-indicator"></span>
+                <span>Introduction (KDD)</span>
+              </a>
+              <a href="#/module/mining/learn/preprocessing" class="nav-subitem" id="nav-dm-prep">
+                <span class="dot-indicator"></span>
+                <span>Data Preprocessing</span>
+              </a>
+              <a href="#/module/mining/learn/mining-architecture" class="nav-subitem" id="nav-dm-arch">
+                <span class="dot-indicator"></span>
+                <span>Mining Architecture</span>
+              </a>
+              <a href="#/module/mining/learn/data-exploration" class="nav-subitem" id="nav-dm-eda">
+                <span class="dot-indicator"></span>
+                <span>Exploratory Analysis (EDA)</span>
+              </a>
+
+              <div class="nav-subgroup-title">CLASSIFICATION</div>
+              <a href="#/module/mining/learn/classification" class="nav-subitem" id="nav-dm-class">
+                <span class="dot-indicator"></span>
+                <span>Decision Trees &amp; Naive Bayes</span>
+              </a>
+
+              <div class="nav-subgroup-title">CLUSTERING</div>
+              <a href="#/module/mining/learn/kmeans-clustering" class="nav-subitem" id="nav-dm-cluster">
+                <span class="dot-indicator"></span>
+                <span>K-Means &amp; Hierarchical</span>
+              </a>
+
+              <div class="nav-subgroup-title">ASSOCIATION RULES</div>
+              <a href="#/module/mining/learn/apriori-algorithm" class="nav-subitem" id="nav-dm-rules">
+                <span class="dot-indicator"></span>
+                <span>Apriori Algorithm</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- GROUP 2: LEARNING TOOLS -->
+        <div class="nav-group">
+          <div class="nav-group-title">LEARNING TOOLS</div>
+
+          <!-- Accordion: Numerical Solver Flow -->
+          <div class="nav-accordion" id="accordion-numerical">
+            <div class="nav-item nav-accordion-header" id="nav-numerical-header" data-tooltip="Numerical Solver">
+              <a href="#/numerical-solver" class="nav-item-link" id="nav-numerical-solver">
+                <i data-lucide="calculator"></i>
+                <span class="nav-label">Numerical Solver</span>
+              </a>
+              <button type="button" class="accordion-arrow-btn" id="toggle-numerical" aria-label="Toggle Numerical Submenu" title="Expand / Collapse Submenu">
+                <i data-lucide="chevron-down" class="accordion-arrow"></i>
+              </button>
+            </div>
+            <div class="accordion-content" id="content-numerical">
+              <a href="#/numerical-solver?stage=dataset" class="nav-subitem" id="nav-num-dataset">
+                <span class="dot-indicator"></span>
+                <span>1. Dataset</span>
+              </a>
+              <a href="#/numerical-solver?stage=preprocessing" class="nav-subitem" id="nav-num-prep">
+                <span class="dot-indicator"></span>
+                <span>2. Preprocessing</span>
+              </a>
+              <a href="#/numerical-solver?stage=classification" class="nav-subitem" id="nav-num-clf">
+                <span class="dot-indicator"></span>
+                <span>3. Classification</span>
+              </a>
+              <a href="#/numerical-solver?stage=clustering" class="nav-subitem" id="nav-num-clu">
+                <span class="dot-indicator"></span>
+                <span>4. Clustering</span>
+              </a>
+              <a href="#/numerical-solver?stage=arm" class="nav-subitem" id="nav-num-arm">
+                <span class="dot-indicator"></span>
+                <span>5. Association Rules</span>
+              </a>
+            </div>
+          </div>
+          <a href="#/practical-lab" class="nav-item" id="nav-practical-lab" data-tooltip="Practical Lab">
+            <i data-lucide="flask-conical"></i>
+            <span class="nav-label">Practical Lab</span>
+          </a>
+          <a href="#/demo-videos" class="nav-item" id="nav-demo-videos" data-tooltip="Demo Videos">
+            <i data-lucide="play-circle"></i>
+            <span class="nav-label">Demo Videos</span>
+          </a>
+          <a href="#/ai-assistant" class="nav-item" id="nav-ai-assistant" data-tooltip="AI Assistant">
+            <i data-lucide="bot"></i>
+            <span class="nav-label">AI Assistant</span>
+          </a>
+        </div>
+
+        <!-- GROUP 3: MY LEARNING -->
+        <div class="nav-group">
+          <div class="nav-group-title">MY LEARNING</div>
+
+          <a href="#/progress" class="nav-item" id="nav-progress" data-tooltip="Quiz & Progress">
+            <i data-lucide="trophy"></i>
+            <span class="nav-label">Quiz &amp; Progress</span>
+          </a>
+          <a href="#/notes" class="nav-item" id="nav-notes" data-tooltip="My Notes">
+            <i data-lucide="book-marked"></i>
+            <span class="nav-label">My Notes</span>
+          </a>
+          <a href="#/resources" class="nav-item" id="nav-resources" data-tooltip="Resources">
+            <i data-lucide="library"></i>
+            <span class="nav-label">Resources</span>
+          </a>
+        </div>
       </nav>
       
-      <!-- User Level/XP Progress Card -->
-      <div class="sidebar-user-level-card" id="sidebar-level-card">
-        <div class="sidebar-level-header">
-          <span class="sidebar-rank-label" id="sidebar-rank-text">Data Novice</span>
-          <span class="sidebar-level-num" id="sidebar-level-text">Lvl 1</span>
+      <!-- Progress Widget at Sidebar Bottom -->
+      <div class="sidebar-progress-widget" id="sidebar-progress-widget">
+        <div class="widget-header">
+          <span class="widget-title">Your Progress</span>
+          <span class="widget-percent" id="sidebar-progress-pct">72%</span>
         </div>
-        <div class="sidebar-xp-bar-track">
-          <div class="sidebar-xp-bar-fill" id="sidebar-xp-fill" style="width: 0%"></div>
-        </div>
-        <div style="font-size: 10px; color: var(--text-muted); display: flex; justify-content: space-between; margin-top: 4px;">
-          <span>XP Progress</span>
-          <span id="sidebar-xp-ratio">0 / 500</span>
+        <div class="widget-bar-track">
+          <div class="widget-bar-fill" id="sidebar-progress-fill" style="width: 72%;"></div>
         </div>
       </div>
       
+      <!-- User Profile Footer -->
       <div class="sidebar-footer">
-        <button id="logout-btn" class="btn btn-outline btn-sm btn-block">
-          <i data-lucide="log-out"></i>
-          <span>Sign Out</span>
-        </button>
+        <div class="sidebar-user-profile">
+          <div class="user-avatar" id="sidebar-user-avatar">S</div>
+          <div class="user-info">
+            <span class="user-name" id="sidebar-user-name">Snehal Thombare</span>
+            <span class="user-role">Student</span>
+          </div>
+          <div class="user-actions">
+            <a href="#/profile" class="icon-btn-subtle" title="Profile & Settings">
+              <i data-lucide="settings"></i>
+            </a>
+            <button id="logout-btn" class="icon-btn-subtle text-danger" title="Sign Out">
+              <i data-lucide="log-out"></i>
+            </button>
+          </div>
+        </div>
       </div>
     </aside>
 
     <!-- Main Content Panel -->
     <main id="main-panel" class="main-panel full-width">
       
-      <!-- Top Navigation Header (Hidden on Auth/Login screens, visible on Dashboard/Learning screens) -->
+      <!-- Modern Sticky Top Header -->
       <header id="top-nav" class="top-nav hidden">
         <div class="top-nav-left">
-          <button id="sidebar-toggle" class="mobile-only-btn" aria-label="Open menu">
+          <!-- Toggle Sidebar Mobile & Desktop Buttons -->
+          <button id="sidebar-toggle" class="top-icon-btn mobile-only-btn" aria-label="Toggle navigation menu">
             <i data-lucide="menu"></i>
           </button>
+          <button id="header-collapse-toggle" class="top-icon-btn desktop-only-btn" title="Collapse Sidebar">
+            <i data-lucide="panel-left-close"></i>
+          </button>
           
+          <!-- Breadcrumb & Page Title -->
+          <div class="top-header-titles">
+            <div class="top-breadcrumb" id="header-breadcrumb">
+              <span>Workspace</span> <i data-lucide="chevron-right"></i> <span class="active-crumb">Dashboard</span>
+            </div>
+            <h1 class="top-page-title" id="header-page-title">Interactive Virtual Lab</h1>
+          </div>
+        </div>
+
+        <!-- Center Global Search Input -->
+        <div class="top-nav-center">
           <div class="search-container">
             <i data-lucide="search" class="search-icon"></i>
-            <input type="text" id="search-input" placeholder="Search lessons (e.g. ETL, K-Means, OLAP)..." autocomplete="off">
+            <input type="text" id="search-input" placeholder="Search topics, algorithms, experiments..." autocomplete="off">
+            <kbd class="header-search-kbd">Ctrl K</kbd>
             <div id="search-results" class="search-results-dropdown hidden"></div>
           </div>
         </div>
         
+        <!-- Right Quick Stats & Controls -->
         <div class="top-nav-right">
           <!-- Guided Mode Checkbox -->
-          <div class="guided-mode-toggle">
+          <div class="guided-mode-toggle" title="Toggle Step-by-Step Guided Hints">
             <label class="switch-container">
               <input type="checkbox" id="guided-mode-checkbox">
               <span class="slider"></span>
@@ -132,45 +342,44 @@
             <span class="guided-mode-label">Guided Mode</span>
           </div>
 
-          <!-- Mini Progress bar -->
-          <div class="top-progress-container" title="Overall Completion Progress">
-            <span class="progress-percent-label" id="top-progress-text">0%</span>
-            <div class="progress-bar-track">
-              <div class="progress-bar-fill" id="top-progress-fill" style="width: 0%"></div>
-            </div>
+          <!-- Notification Bell -->
+          <div class="top-notification-container" title="Notifications">
+            <button class="top-icon-btn relative-btn">
+              <i data-lucide="bell"></i>
+              <span class="notification-dot"></span>
+            </button>
           </div>
 
-          <!-- Badges Count -->
-          <a href="#/achievements" class="top-badge-link" title="Unlocked Achievements">
-            <i data-lucide="award" class="gold-icon"></i>
-            <span id="top-achievements-count" class="badge-pill">0</span>
-          </a>
-
           <!-- Theme Toggle Button -->
-          <button id="theme-toggle-btn" class="top-badge-link" title="Toggle Theme" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; justify-content: center; cursor: pointer; border: 1px solid var(--border-color); background-color: rgba(255, 255, 255, 0.05); color: var(--text-primary);">
-            <i data-lucide="sun" id="theme-icon" style="width: 18px; height: 18px;"></i>
+          <button id="theme-toggle-btn" class="top-icon-btn" title="Toggle Light / Dark Mode">
+            <i data-lucide="sun" id="theme-icon"></i>
           </button>
 
-          <!-- Profile quick access -->
-          <div class="profile-quick-access" id="profile-dropdown-trigger">
-            <div class="profile-avatar" id="avatar-letters">US</div>
+          <!-- User Profile Dropdown Trigger -->
+          <div class="profile-quick-access" id="profile-dropdown-trigger" title="User Menu">
+            <div class="profile-avatar" id="avatar-letters">ST</div>
+            <div class="profile-text-group desktop-only-flex">
+              <span class="profile-name-text" id="top-user-name">Snehal Thombare</span>
+              <span class="profile-role-badge">Student</span>
+            </div>
+            <i data-lucide="chevron-down" class="dropdown-arrow desktop-only-inline"></i>
           </div>
         </div>
       </header>
 
-      <!-- App Main Content Container -->
+      <!-- Dynamic Content Injection Container -->
       <section id="app" class="app-container">
-        <!-- Rendered views are dynamically injected here -->
+        <!-- Views dynamically injected here -->
       </section>
 
     </main>
 
   </div>
 
-  <!-- Achievement Unlock Toast Notification -->
+  <!-- Toast Notification Container -->
   <div id="achievement-toast-container" class="toast-container"></div>
 
-  <!-- Main scripts -->
+  <!-- Entry Script -->
   <script type="module" src="/js/app.js"></script>
 </body>
 </html>

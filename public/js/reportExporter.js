@@ -14,8 +14,23 @@ export const ReportExporter = {
     URL.revokeObjectURL(url);
   },
 
-  exportNumericalSolution(solutionData) {
-    const { title, algorithm, givenData, formula, steps, finalAnswer, examAnswer, explanation } = solutionData;
+  exportNumericalSolution(solutionData, rawText = '') {
+    let title, algorithm, givenData, formula, steps, finalAnswer, examAnswer, explanation;
+
+    if (typeof solutionData === 'string') {
+      algorithm = solutionData;
+      title = solutionData;
+      steps = rawText || '';
+      finalAnswer = 'See complete derivation above.';
+      givenData = 'Extracted Problem Input';
+    } else if (solutionData && typeof solutionData === 'object') {
+      ({ title, algorithm, givenData, formula, steps, finalAnswer, examAnswer, explanation } = solutionData);
+    } else {
+      algorithm = 'Numerical Solution';
+      title = 'DataMineX Solution';
+      steps = '';
+    }
+
     const dateStr = new Date().toLocaleString();
 
     let report = `========================================================================\n`;
@@ -26,11 +41,15 @@ export const ReportExporter = {
     report += `Problem Title:  ${title || 'Numerical Problem Solution'}\n`;
     report += `------------------------------------------------------------------------\n\n`;
 
-    report += `[1. GIVEN DATA]\n`;
-    report += `${typeof givenData === 'string' ? givenData : JSON.stringify(givenData, null, 2)}\n\n`;
+    if (givenData) {
+      report += `[1. GIVEN DATA]\n`;
+      report += `${typeof givenData === 'string' ? givenData : JSON.stringify(givenData, null, 2)}\n\n`;
+    }
 
-    report += `[2. FORMULA & METHOD]\n`;
-    report += `${formula || 'Standard Deterministic Algorithm Definition'}\n\n`;
+    if (formula) {
+      report += `[2. FORMULA & METHOD]\n`;
+      report += `${formula || 'Standard Deterministic Algorithm Definition'}\n\n`;
+    }
 
     report += `[3. STEP-BY-STEP CALCULATIONS]\n`;
     if (Array.isArray(steps)) {
@@ -42,8 +61,10 @@ export const ReportExporter = {
     }
     report += `\n`;
 
-    report += `[4. FINAL ANSWER]\n`;
-    report += `>>> ${finalAnswer} <<<\n\n`;
+    if (finalAnswer) {
+      report += `[4. FINAL ANSWER]\n`;
+      report += `>>> ${finalAnswer} <<<\n\n`;
+    }
 
     if (examAnswer) {
       report += `[5. EXAM-READY CONCISE ANSWER]\n`;
@@ -64,6 +85,49 @@ export const ReportExporter = {
 
     const cleanFilename = `${(algorithm || 'numerical_solution').toLowerCase().replace(/[^a-z0-9]/g, '_')}_report.txt`;
     this.downloadTextFile(cleanFilename, report);
+  },
+
+  printAcademicReport(title, htmlContent) {
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${title || 'DataMineX Academic Numerical Report'}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; padding: 30px; margin: 0; }
+          h2, h3, h4 { color: #0f172a; margin-top: 20px; }
+          table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 13px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: left; }
+          th { background: #f1f5f9; font-weight: 700; }
+          .header-box { border-bottom: 2px solid #2563eb; padding-bottom: 12px; margin-bottom: 20px; }
+          .final-box { border: 2px solid #16a34a; background: #f0fdf4; padding: 15px; border-radius: 8px; margin-top: 20px; }
+          @media print {
+            body { padding: 0; }
+            button { display: none !important; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header-box">
+          <h1 style="color: #2563eb; margin: 0 0 4px; font-size: 24px;">DataMineX &mdash; Academic Numerical Solution Report</h1>
+          <div style="font-size: 13px; color: #64748b;">Generated: ${new Date().toLocaleString()} &bull; Course: Data Warehousing &amp; Data Mining</div>
+        </div>
+        <div>
+          ${htmlContent}
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
   },
 
   exportPracticalLabReport(labTitle, datasetName, summaryStats, results) {

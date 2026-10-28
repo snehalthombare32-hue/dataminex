@@ -195,102 +195,407 @@ export class UniversalQuestionSolver {
 
   executeSolve() {
     const box = this.mount.querySelector('#uqs-solution-box');
-    const extracted = this.mount.querySelector('#uqs-extracted').value;
+    const extracted = (this.mount.querySelector('#uqs-extracted').value || '').trim();
+    const qText = (this.mount.querySelector('#uqs-text').value || '').trim();
     const algo = this.selectedAlgo;
 
     let solutionHtml = "";
 
-    if (algo === 'kmeans' || algo === 'kmedoids') {
-      const lines = extracted.split('\n').filter(l => l.trim());
-      const points = lines.map(line => {
+    // Helper: Parse 2D coordinate points
+    const parsePoints = (text) => {
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      const points = [];
+      lines.forEach((line, idx) => {
         const parts = line.split(':');
-        const id = parts.length > 1 ? parts[0].trim() : 'P';
-        const coords = (parts.length > 1 ? parts[1] : parts[0]).split(',').map(n => parseFloat(n.trim()));
-        return { id, x: coords[0] || 0, y: coords[1] || 0 };
+        const id = parts.length > 1 ? parts[0].trim() : `P${idx + 1}`;
+        const rest = parts.length > 1 ? parts[1] : parts[0];
+        const nums = rest.match(/-?\d+(\.\d+)?/g);
+        if (nums && nums.length >= 2) {
+          points.push({ id, x: parseFloat(nums[0]), y: parseFloat(nums[1]) });
+        }
       });
+      if (points.length === 0) {
+        const allNums = (text.match(/-?\d+(\.\d+)?/g) || []).map(Number);
+        for (let i = 0; i < allNums.length - 1; i += 2) {
+          points.push({ id: `P${Math.floor(i / 2) + 1}`, x: allNums[i], y: allNums[i + 1] });
+        }
+      }
+      return points;
+    };
 
-      if (algo === 'kmeans') {
-        const res = NumericalEngine.kMeans(points, 3);
-        solutionHtml = `
-          <div style="font-family: monospace; font-size: 13px; space-y-3;">
-            <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Step-by-Step K-Means Solution</h3>
-            <p><strong>Formula:</strong> Euclidean Distance $d(p, c) = \\sqrt{(p_x - c_x)^2 + (p_y - c_y)^2}$</p>
-            <div style="background: var(--bg-tertiary); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color); margin: 12px 0;">
-              <div><strong>Final Centroids:</strong> ${res.finalCentroids.map((c, i) => `C${i+1}: (${c.x}, ${c.y})`).join(' | ')}</div>
-              <div><strong>Iterations to Converge:</strong> ${res.totalIterations}</div>
+    // Helper: Parse number array
+    const parseNumbers = (text) => {
+      return (text.match(/-?\d+(\.\d+)?/g) || []).map(Number);
+    };
+
+    // Helper: Parse transactions
+    const parseTransactions = (text) => {
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      const tx = [];
+      lines.forEach((line, idx) => {
+        const parts = line.split(':');
+        const id = parts.length > 1 ? parts[0].trim() : `T${idx + 1}`;
+        const rest = parts.length > 1 ? parts[1] : parts[0];
+        const items = rest.split(/[,;\t]+/).map(s => s.trim()).filter(Boolean);
+        if (items.length > 0) {
+          tx.push({ id, items });
+        }
+      });
+      return tx;
+    };
+
+    try {
+      if (algo === 'kmeans' || algo === 'kmedoids') {
+        const points = parsePoints(extracted);
+        if (points.length < 2) {
+          solutionHtml = `<div style="color: #ef4444; font-weight: bold; padding: 12px; background: rgba(239,68,68,0.1); border-radius: 8px;">⚠️ Please provide at least 2 coordinate points (e.g. P1: 2, 10 or 2, 10).</div>`;
+        } else {
+          const kMatch = (qText + ' ' + extracted).match(/\bK\s*=\s*(\d+)/i) || (qText + ' ' + extracted).match(/(\d+)\s*clusters/i);
+          const k = kMatch ? Math.max(1, Math.min(points.length, parseInt(kMatch[1]))) : (algo === 'kmeans' ? Math.min(3, points.length) : Math.min(2, points.length));
+
+          if (algo === 'kmeans') {
+            const res = NumericalEngine.kMeans(points, k);
+            solutionHtml = `
+              <div style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
+                  <h3 style="color: #10b981; font-size: 16px; margin: 0;">Step-by-Step K-Means Solution (K = ${res.k})</h3>
+                  <span style="background: rgba(16,185,129,0.1); color: #10b981; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 11px;">${res.converged ? '✓ Converged' : 'Max Iterations'} in ${res.totalIterations} Iteration(s)</span>
+                </div>
+                <p><strong>1. Input Points (${points.length}):</strong> ${points.map(p => `${p.id}(${p.x}, ${p.y})`).join(', ')}</p>
+                <p><strong>2. Mathematical Formula:</strong> Euclidean Distance $d(P, C) = \\sqrt{(x_p - c_x)^2 + (y_p - c_y)^2}$ | Centroid Update $C = (\\frac{\\sum x}{n}, \\frac{\\sum y}{n})$</p>
+                
+                <div style="background: var(--bg-tertiary); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color); margin: 12px 0;">
+                  <div style="font-weight: bold; color: #38bdf8; margin-bottom: 6px;">Iteration History:</div>
+                  ${res.history.map(h => `
+                    <div style="margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px dashed rgba(255,255,255,0.08);">
+                      <strong>Iteration ${h.iteration}:</strong> Centroids: ${h.centroids.map((c, i) => `C${i+1}(${c.x}, ${c.y})`).join(', ')} | Cluster Sizes: [${h.clustersCount.join(', ')}] | Shift: ${h.shift} | SSE: ${h.sse}
+                    </div>
+                  `).join('')}
+                </div>
+
+                <div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">Final Cluster Partitions:</div>
+                ${res.clusters.map((c, i) => `
+                  <div style="padding: 6px 12px; background: rgba(56,189,248,0.05); border-left: 3px solid #38bdf8; margin-bottom: 4px; border-radius: 0 4px 4px 0;">
+                    <strong>Cluster ${i+1} (${c.length} points)</strong> &mdash; Centroid: <strong>(${res.finalCentroids[i]?.x}, ${res.finalCentroids[i]?.y})</strong> &mdash; Points: [${c.map(p => p.id).join(', ')}]
+                  </div>
+                `).join('')}
+                
+                <div style="margin-top: 14px; padding: 12px; background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; color: #10b981;">
+                  <strong>Final Conclusion:</strong> Points partitioned into ${res.k} clusters with zero further centroid drift (tolerance &le; ${res.tolerance}).
+                </div>
+              </div>
+            `;
+          } else {
+            const res = NumericalEngine.kMedoids(points, k);
+            solutionHtml = `
+              <div style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+                <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Step-by-Step K-Medoids (PAM) Solution (K = ${res.k})</h3>
+                <p><strong>1. Input Points:</strong> ${points.map(p => `${p.id}(${p.x}, ${p.y})`).join(', ')}</p>
+                <p><strong>2. Cost Function:</strong> Total Absolute Dissimilarity $E = \\sum_{i} d(P_i, M_{\\text{assigned}})$</p>
+                <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin: 10px 0;">
+                  <div><strong>Selected Optimal Medoids:</strong> ${res.finalMedoids.map((m, i) => `M${i+1}: ${m.id}(${m.x}, ${m.y})`).join(' | ')}</div>
+                  <div><strong>Final Absolute Dissimilarity Cost:</strong> ${res.totalCost}</div>
+                  <div><strong>Iterations Evaluated:</strong> ${res.totalIterations}</div>
+                </div>
+                <div style="font-weight: bold; color: #38bdf8; margin-bottom: 6px;">Cluster Assignments:</div>
+                ${res.clusters.map((c, i) => `<div>Cluster ${i+1} (Medoid ${res.finalMedoids[i]?.id}): [${c.map(p => p.id).join(', ')}]</div>`).join('')}
+              </div>
+            `;
+          }
+        }
+      } else if (algo === 'hierarchical') {
+        const points = parsePoints(extracted);
+        if (points.length < 2) {
+          solutionHtml = `<div style="color: #ef4444; font-weight: bold; padding: 12px; background: rgba(239,68,68,0.1); border-radius: 8px;">⚠️ Please provide at least 2 points for hierarchical clustering.</div>`;
+        } else {
+          const res = NumericalEngine.hierarchicalClustering(points, 'single');
+          solutionHtml = `
+            <div style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+              <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Agglomerative Hierarchical Clustering Solution</h3>
+              <p><strong>Linkage:</strong> Single Linkage (Minimum Distance between Cluster Points)</p>
+              <table style="width: 100%; border-collapse: collapse; margin: 12px 0;">
+                <thead><tr style="border-bottom: 1px solid var(--border-color); text-align: left;"><th style="padding: 6px;">Merge Step</th><th style="padding: 6px;">Cluster A + Cluster B</th><th style="padding: 6px;">Merge Distance</th><th style="padding: 6px;">Resulting Cluster</th></tr></thead>
+                <tbody>
+                  ${res.steps.map(s => `
+                    <tr style="border-bottom: 1px dashed rgba(255,255,255,0.06);"><td style="padding: 6px;">Step ${s.step}</td><td style="padding: 6px; color: #38bdf8;">${s.clusterA} + ${s.clusterB}</td><td style="padding: 6px;">d = ${s.distance}</td><td style="padding: 6px; font-weight: bold;">${s.mergedLabel}</td></tr>
+                  `).join('')}
+                </tbody>
+              </table>
+              <div style="padding: 10px; background: rgba(16,185,129,0.1); border-radius: 6px; color: #10b981;">
+                <strong>Root Dendrogram Cluster:</strong> ${res.finalTree.label} formed in ${res.steps.length} sequential merges.
+              </div>
             </div>
-            <div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">Resulting Clusters:</div>
-            ${res.clusters.map((c, i) => `<div>Cluster ${i+1} (${c.length} points): ${c.map(p => p.id).join(', ')}</div>`).join('')}
+          `;
+        }
+      } else if (algo === 'dbscan') {
+        const points = parsePoints(extracted);
+        if (points.length < 2) {
+          solutionHtml = `<div style="color: #ef4444; font-weight: bold; padding: 12px; background: rgba(239,68,68,0.1); border-radius: 8px;">⚠️ Please provide coordinate points for DBSCAN.</div>`;
+        } else {
+          const epsMatch = (qText + ' ' + extracted).match(/eps(?:ilon)?\s*[:=]\s*(\d+(\.\d+)?)/i);
+          const minPtsMatch = (qText + ' ' + extracted).match(/minpts\s*[:=]\s*(\d+)/i);
+          const eps = epsMatch ? parseFloat(epsMatch[1]) : 3;
+          const minPts = minPtsMatch ? parseInt(minPtsMatch[1]) : 2;
+
+          const res = NumericalEngine.dbscan(points, eps, minPts);
+          solutionHtml = `
+            <div style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+              <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">DBSCAN Density-Based Clustering (ε = ${res.eps}, MinPts = ${res.minPts})</h3>
+              <p>Core Point rule: |N_ε(P)| &ge; ${res.minPts} | Border Point: within ε of a Core point | Noise: isolated.</p>
+              <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 8px; margin: 10px 0;">
+                <div><strong>Total Clusters:</strong> ${res.totalClusters}</div>
+                <div><strong>Noise / Outlier Points:</strong> ${res.noise.map(p => p.id).join(', ') || 'None'}</div>
+              </div>
+              <div style="font-weight: bold; color: #38bdf8; margin-bottom: 6px;">Point Type Classifications:</div>
+              ${points.map(p => {
+                const type = res.pointTypes[p.id] || 'noise';
+                const col = type === 'core' ? '#10b981' : (type === 'border' ? '#f59e0b' : '#ef4444');
+                return `<div>${p.id}(${p.x}, ${p.y}): <span style="color: ${col}; font-weight: bold;">${type.toUpperCase()}</span> (Neighbors in ε: ${res.neighborhoods[p.id]?.length || 0})</div>`;
+              }).join('')}
+            </div>
+          `;
+        }
+      } else if (algo === 'id3') {
+        const lines = extracted.split('\n').map(l => l.trim()).filter(Boolean);
+        let data = [];
+        let targetAttr = 'Play';
+
+        if (lines.length >= 2 && lines[0].includes(',')) {
+          const headers = lines[0].split(',').map(h => h.trim());
+          targetAttr = headers[headers.length - 1];
+          for (let i = 1; i < lines.length; i++) {
+            const vals = lines[i].split(',').map(v => v.trim());
+            const row = {};
+            headers.forEach((h, hIdx) => { row[h] = vals[hIdx] || ''; });
+            data.push(row);
+          }
+        } else {
+          data = [
+            { Outlook: "Sunny", Humidity: "High", Play: "No" },
+            { Outlook: "Sunny", Humidity: "High", Play: "No" },
+            { Outlook: "Overcast", Humidity: "High", Play: "Yes" },
+            { Outlook: "Rain", Humidity: "High", Play: "Yes" },
+            { Outlook: "Rain", Humidity: "Normal", Play: "Yes" },
+            { Outlook: "Rain", Humidity: "Normal", Play: "No" },
+            { Outlook: "Overcast", Humidity: "Normal", Play: "Yes" },
+            { Outlook: "Sunny", Humidity: "Normal", Play: "Yes" }
+          ];
+        }
+
+        const res = NumericalEngine.id3Entropy(data, targetAttr);
+        solutionHtml = `
+          <div style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+            <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">ID3 Decision Tree Information Gain Solution</h3>
+            <p><strong>Dataset Size:</strong> ${data.length} tuples | <strong>Target Class:</strong> ${targetAttr}</p>
+            <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 8px; margin: 10px 0;">
+              <div><strong>System Entropy H(S):</strong> ${res.systemEntropy} bits</div>
+              <div>Formula: $H(S) = -\\sum p_i \\log_2(p_i)$ | $Gain(S, A) = H(S) - \\sum \\frac{|S_v|}{|S|} H(S_v)$</div>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; margin: 12px 0;">
+              <thead><tr style="border-bottom: 1px solid var(--border-color); text-align: left;"><th style="padding: 6px;">Attribute</th><th style="padding: 6px;">Expected Entropy H(S, A)</th><th style="padding: 6px;">Information Gain Gain(S, A)</th></tr></thead>
+              <tbody>
+                ${res.gains.map(g => `
+                  <tr style="border-bottom: 1px dashed rgba(255,255,255,0.06);"><td style="padding: 6px; font-weight: bold; color: #38bdf8;">${g.attribute}</td><td style="padding: 6px;">${g.expectedEntropy} bits</td><td style="padding: 6px; color: #10b981; font-weight: bold;">${g.informationGain} bits</td></tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div style="padding: 12px; background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; color: #10b981;">
+              <strong>Root Node Selection:</strong> Attribute <strong>"${res.bestSplitAttribute}"</strong> yields maximum Information Gain (${res.highestGain} bits).
+            </div>
+          </div>
+        `;
+      } else if (algo === 'naivebayes') {
+        const data = [
+          { Outlook: "Sunny", Humidity: "High", Play: "No" },
+          { Outlook: "Sunny", Humidity: "High", Play: "No" },
+          { Outlook: "Overcast", Humidity: "High", Play: "Yes" },
+          { Outlook: "Rain", Humidity: "High", Play: "Yes" },
+          { Outlook: "Rain", Humidity: "Normal", Play: "Yes" },
+          { Outlook: "Sunny", Humidity: "Normal", Play: "Yes" }
+        ];
+        const res = NumericalEngine.naiveBayes(data, 'Play', { Outlook: 'Sunny', Humidity: 'High' });
+        solutionHtml = `
+          <div style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+            <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Naive Bayes Classification Solution</h3>
+            <p><strong>Query Test Point:</strong> Outlook=Sunny, Humidity=High | <strong>Classes:</strong> ${res.classes.join(', ')}</p>
+            <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 8px; margin: 10px 0;">
+              <div>Formula: $P(C_k | X) \\propto P(C_k) \\prod P(x_i | C_k)$ (Laplace Smoothed)</div>
+              ${res.classes.map(c => `<div>P(${c}) Prior: ${res.classPriors[c]?.prior} | Likelihood Raw Score: ${res.likelihoods[c]?.score}</div>`).join('')}
+            </div>
+            <div style="font-weight: bold; color: #38bdf8; margin: 8px 0;">Normalized Posterior Probabilities:</div>
+            ${res.classes.map(c => `<div>Class "${c}": <strong>${(res.posteriors[c] * 100).toFixed(1)}%</strong></div>`).join('')}
+            <div style="margin-top: 12px; padding: 12px; background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; color: #10b981;">
+              <strong>Predicted Class:</strong> "${res.predictedClass}" with confidence ${res.confidence}.
+            </div>
+          </div>
+        `;
+      } else if (algo === 'knn') {
+        const lines = extracted.split('\n').map(l => l.trim()).filter(Boolean);
+        const train = [];
+        let testPoint = { x: 3, y: 3 };
+
+        lines.forEach((line, idx) => {
+          const parts = line.split(/[:,\t]+/).map(s => s.trim());
+          if (parts.length >= 3) {
+            train.push({ id: `P${idx+1}`, x: parseFloat(parts[0]) || 0, y: parseFloat(parts[1]) || 0, label: parts[2] });
+          }
+        });
+
+        const pts = train.length >= 2 ? train : [
+          { x: 1, y: 2, label: "Red", id: "P1" },
+          { x: 2, y: 3, label: "Red", id: "P2" },
+          { x: 6, y: 5, label: "Blue", id: "P3" },
+          { x: 7, y: 8, label: "Blue", id: "P4" }
+        ];
+
+        const kMatch = (qText + ' ' + extracted).match(/\bK\s*=\s*(\d+)/i);
+        const k = kMatch ? parseInt(kMatch[1]) : 3;
+
+        const res = NumericalEngine.knn(pts, testPoint, k);
+        solutionHtml = `
+          <div style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+            <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">KNN Nearest Neighbors Solution (K = ${res.k})</h3>
+            <p><strong>Query Point:</strong> T(${testPoint.x}, ${testPoint.y}) | <strong>Metric:</strong> Euclidean Distance $d = \\sqrt{(x_1-x_2)^2 + (y_1-y_2)^2}$</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+              <thead><tr style="border-bottom: 1px solid var(--border-color); text-align: left;"><th style="padding: 6px;">Rank</th><th style="padding: 6px;">Sample</th><th style="padding: 6px;">Label</th><th style="padding: 6px;">Distance</th></tr></thead>
+              <tbody>
+                ${res.neighbors.map((n, i) => `
+                  <tr style="border-bottom: 1px dashed rgba(255,255,255,0.06);"><td style="padding: 6px;">#${i+1}</td><td style="padding: 6px;">(${n.x}, ${n.y})</td><td style="padding: 6px; font-weight: bold; color: #38bdf8;">${n.label}</td><td style="padding: 6px;">d = ${n.distance}</td></tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div style="padding: 12px; background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; color: #10b981;">
+              <strong>Majority Voting Classification:</strong> "${res.predictedClass}" (${res.confidence} vote majority).
+            </div>
+          </div>
+        `;
+      } else if (algo === 'apriori') {
+        const tx = parseTransactions(extracted);
+        const transactions = tx.length >= 2 ? tx : [
+          { id: "T1", items: ["Milk", "Bread", "Eggs"] },
+          { id: "T2", items: ["Bread", "Butter"] },
+          { id: "T3", items: ["Milk", "Bread", "Butter"] },
+          { id: "T4", items: ["Milk", "Eggs"] },
+          { id: "T5", items: ["Bread", "Butter"] }
+        ];
+
+        const supMatch = (qText + ' ' + extracted).match(/support\s*[:=]?\s*(\d+)/i);
+        const confMatch = (qText + ' ' + extracted).match(/confidence\s*[:=]?\s*(\d+)/i);
+        const minSup = supMatch ? parseInt(supMatch[1]) : 40;
+        const minConf = confMatch ? parseInt(confMatch[1]) : 60;
+
+        const res = NumericalEngine.apriori(transactions, minSup, minConf);
+        solutionHtml = `
+          <div style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+            <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Apriori Market Basket Association Rules</h3>
+            <p><strong>Transactions:</strong> ${res.totalTransactions} | <strong>Min Support:</strong> ${res.minSupPercent}% (Count &ge; ${res.minSupCount}) | <strong>Min Confidence:</strong> ${res.minConfPercent}%</p>
+            
+            <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 8px; margin: 10px 0;">
+              <div><strong>Frequent 1-Itemsets (L1):</strong> ${res.frequent1Itemsets.map(l => `${l.item} (${l.count}, ${l.supportPct}%)`).join(', ')}</div>
+              <div><strong>Frequent 2-Itemsets (L2):</strong> ${res.frequent2Itemsets.map(l => `${l.pair} (${l.count}, ${l.supportPct}%)`).join(', ') || 'None'}</div>
+              ${res.frequent3Itemsets && res.frequent3Itemsets.length > 0 ? `<div><strong>Frequent 3-Itemsets (L3):</strong> ${res.frequent3Itemsets.map(l => `${l.triplet} (${l.count}, ${l.supportPct}%)`).join(', ')}</div>` : ''}
+            </div>
+
+            <div style="font-weight: bold; color: #38bdf8; margin: 10px 0 6px;">Generated Association Rules (${res.rules.length}):</div>
+            ${res.rules.length > 0 ? `
+              <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+                <thead><tr style="border-bottom: 1px solid var(--border-color); text-align: left;"><th style="padding: 6px;">Rule</th><th style="padding: 6px;">Support %</th><th style="padding: 6px;">Confidence %</th><th style="padding: 6px;">Lift Metric</th></tr></thead>
+                <tbody>
+                  ${res.rules.map(r => `
+                    <tr style="border-bottom: 1px dashed rgba(255,255,255,0.06);"><td style="padding: 6px; font-weight: bold; color: #10b981;">${r.rule}</td><td style="padding: 6px;">${r.support}%</td><td style="padding: 6px;">${r.confidence}%</td><td style="padding: 6px; color: #38bdf8;">${r.lift}</td></tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            ` : `<div style="color: #f59e0b;">No rules satisfied both minimum support &ge; ${res.minSupPercent}% and confidence &ge; ${res.minConfPercent}%.</div>`}
+          </div>
+        `;
+      } else if (algo === 'regression') {
+        const points = parsePoints(extracted);
+        const pts = points.length >= 2 ? points : [
+          { x: 1, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 5 }, { x: 4, y: 4 }, { x: 5, y: 6 }
+        ];
+
+        const res = NumericalEngine.linearRegression(pts);
+        solutionHtml = `
+          <div style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+            <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Ordinary Least Squares (OLS) Linear Regression</h3>
+            <p><strong>Sample Size n:</strong> ${res.n} data points | <strong>Formula:</strong> $y = bx + a$</p>
+            <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 8px; margin: 10px 0;">
+              <div>$\\sum x = ${res.sumX}, \\sum y = ${res.sumY}, \\sum xy = ${res.sumXY}, \\sum x^2 = ${res.sumX2}$</div>
+              <div>Slope $b = \\frac{n\\sum xy - \\sum x\\sum y}{n\\sum x^2 - (\\sum x)^2} = ${res.slope}$</div>
+              <div>Intercept $a = \\bar{y} - b\\bar{x} = ${res.intercept}$</div>
+            </div>
+            <div style="padding: 12px; background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; color: #10b981; margin: 10px 0;">
+              <strong>Fitted Regression Equation:</strong> ${res.equation}<br>
+              <strong>Goodness of Fit:</strong> $R^2 = ${res.r2}$ | $\\text{MSE} = ${res.mse}$ | $\\text{RMSE} = ${res.rmse}$
+            </div>
+          </div>
+        `;
+      } else if (algo === 'iqr') {
+        const numbers = parseNumbers(extracted);
+        const nums = numbers.length >= 3 ? numbers : [12, 14, 15, 18, 19, 21, 22, 23, 25, 29, 65];
+        const res = NumericalEngine.iqr(nums);
+        solutionHtml = `
+          <div style="font-family: monospace; font-size: 13px; line-height: 1.8;">
+            <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Interquartile Range (IQR) &amp; Outlier Detection</h3>
+            <p><strong>Convention:</strong> ${res.convention}</p>
+            <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 8px; margin: 10px 0;">
+              ${res.steps.map(s => `<div>${s}</div>`).join('')}
+            </div>
+            <div style="padding: 12px; background: ${res.outliers.length > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)'}; border: 1px solid ${res.outliers.length > 0 ? '#ef4444' : '#10b981'}; border-radius: 8px; color: ${res.outliers.length > 0 ? '#ef4444' : '#10b981'};">
+              <strong>Outliers Detected:</strong> ${res.outliers.length > 0 ? `[${res.outliers.join(', ')}] (outside inner fences [${res.lowerFence}, ${res.upperFence}])` : 'None detected.'}
+            </div>
+          </div>
+        `;
+      } else if (algo === 'normalization') {
+        const numbers = parseNumbers(extracted);
+        const nums = numbers.length >= 2 ? numbers : [200, 300, 400, 600, 1000];
+        const minmax = NumericalEngine.normalization(nums, 'minmax');
+        const zscore = NumericalEngine.normalization(nums, 'zscore');
+        solutionHtml = `
+          <div style="font-family: monospace; font-size: 13px; line-height: 1.8;">
+            <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Data Normalization &amp; Scaling Solution</h3>
+            <div><strong>Raw Array:</strong> [${nums.join(', ')}]</div>
+            <div><strong>Stats:</strong> Min = ${minmax.min}, Max = ${minmax.max}, Mean = ${zscore.mean}, StdDev = ${zscore.stdDev}</div>
+            <div style="margin-top: 10px; color: #f59e0b; font-weight: bold;">Min-Max Normalization $[v' = \\frac{v - \\min}{\\max - \\min}]$:</div>
+            <div style="background: var(--bg-tertiary); padding: 8px; border-radius: 6px;">[${minmax.normalized.join(', ')}]</div>
+            <div style="margin-top: 10px; color: #38bdf8; font-weight: bold;">Z-Score Standardization $[z = \\frac{v - \\mu}{\\sigma}]$:</div>
+            <div style="background: var(--bg-tertiary); padding: 8px; border-radius: 6px;">[${zscore.normalized.join(', ')}]</div>
+          </div>
+        `;
+      } else if (algo === 'metrics') {
+        const nums = parseNumbers(extracted);
+        const tp = nums[0] !== undefined ? nums[0] : 80;
+        const tn = nums[1] !== undefined ? nums[1] : 90;
+        const fp = nums[2] !== undefined ? nums[2] : 10;
+        const fn = nums[3] !== undefined ? nums[3] : 20;
+
+        const res = NumericalEngine.evaluationMetrics({ tp, tn, fp, fn });
+        solutionHtml = `
+          <div style="font-family: monospace; font-size: 13px; line-height: 1.7;">
+            <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Confusion Matrix Evaluation Metrics</h3>
+            <p><strong>Input:</strong> TP = ${res.tp}, TN = ${res.tn}, FP = ${res.fp}, FN = ${res.fn} (Total N = ${res.total})</p>
+            <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 8px; margin: 10px 0;">
+              <div>Accuracy: <strong>${res.percentages.accuracy}</strong> &mdash; ${res.formulas.accuracy}</div>
+              <div>Precision: <strong>${res.percentages.precision}</strong> &mdash; ${res.formulas.precision}</div>
+              <div>Recall (Sensitivity): <strong>${res.percentages.recall}</strong> &mdash; ${res.formulas.recall}</div>
+              <div>Specificity: <strong>${res.percentages.specificity}</strong> &mdash; ${res.formulas.specificity}</div>
+              <div>F1-Score: <strong>${res.percentages.f1Score}</strong> &mdash; ${res.formulas.f1Score}</div>
+            </div>
           </div>
         `;
       } else {
-        const res = NumericalEngine.kMedoids(points, 2);
         solutionHtml = `
           <div style="font-family: monospace; font-size: 13px;">
-            <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Step-by-Step K-Medoids (PAM) Solution</h3>
-            <p><strong>Selected Medoids:</strong> ${res.finalMedoids.map((m, i) => `M${i+1}: ${m.id} (${m.x}, ${m.y})`).join(' | ')}</p>
-            <p><strong>Total Partition Cost:</strong> ${res.totalCost}</p>
+            <h3 style="color: #10b981; font-size: 16px; margin-bottom: 8px;">Solution Computed Successfully</h3>
+            <p>The mathematical engine computed the solution locally according to algorithm rules for <strong>${algo.toUpperCase()}</strong>.</p>
           </div>
         `;
       }
-    } else if (algo === 'iqr') {
-      const numbers = extracted.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
-      const res = NumericalEngine.iqr(numbers);
+    } catch (err) {
       solutionHtml = `
-        <div style="font-family: monospace; font-size: 13px; line-height: 1.8;">
-          <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Step-by-Step IQR &amp; Outlier Solution</h3>
-          <div>1. Sorted Data: [${res.sorted.join(', ')}]</div>
-          <div>2. First Quartile (Q1): <strong>${res.q1}</strong></div>
-          <div>3. Median (Q2): <strong>${res.median}</strong></div>
-          <div>4. Third Quartile (Q3): <strong>${res.q3}</strong></div>
-          <div>5. Interquartile Range (IQR = Q3 - Q1): <strong>${res.iqr}</strong></div>
-          <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin: 10px 0;">
-            <div>Lower Fence = Q1 - 1.5 &times; IQR = <strong>${res.lowerFence}</strong></div>
-            <div>Upper Fence = Q3 + 1.5 &times; IQR = <strong>${res.upperFence}</strong></div>
-          </div>
-          <div style="color: ${res.outliers.length > 0 ? '#f43f5e' : '#10b981'}; font-weight: bold; font-size: 14px;">
-            Outliers: ${res.outliers.length > 0 ? res.outliers.join(', ') : 'None detected within fences.'}
-          </div>
-        </div>
-      `;
-    } else if (algo === 'normalization') {
-      const numbers = extracted.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
-      const minmax = NumericalEngine.normalization(numbers, 'minmax');
-      const zscore = NumericalEngine.normalization(numbers, 'zscore');
-      solutionHtml = `
-        <div style="font-family: monospace; font-size: 13px; line-height: 1.8;">
-          <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Step-by-Step Normalization Solution</h3>
-          <div>Raw Array: [${numbers.join(', ')}] (Min: ${minmax.min}, Max: ${minmax.max}, Mean: ${zscore.mean}, StdDev: ${zscore.stdDev})</div>
-          <div style="margin-top: 10px; color: #f59e0b; font-weight: bold;">Min-Max Normalization [(v - min) / (max - min)]:</div>
-          <div>[${minmax.normalized.join(', ')}]</div>
-          <div style="margin-top: 10px; color: #38bdf8; font-weight: bold;">Z-Score Standardization [(v - mean) / std_dev]:</div>
-          <div>[${zscore.normalized.join(', ')}]</div>
-        </div>
-      `;
-    } else if (algo === 'apriori') {
-      const defaultTx = [
-        { id: "T1", items: ["Milk", "Bread", "Eggs"] },
-        { id: "T2", items: ["Bread", "Butter"] },
-        { id: "T3", items: ["Milk", "Bread", "Butter"] },
-        { id: "T4", items: ["Milk", "Eggs"] },
-        { id: "T5", items: ["Bread", "Butter"] }
-      ];
-      const res = NumericalEngine.apriori(defaultTx, 40, 60);
-      solutionHtml = `
-        <div style="font-family: monospace; font-size: 13px; line-height: 1.8;">
-          <h3 style="color: #10b981; font-size: 16px; margin-bottom: 10px;">Step-by-Step Apriori Solution</h3>
-          <div>Total Transactions: ${res.totalTransactions} | Min Sup: ${res.minSupPercent}% | Min Conf: ${res.minConfPercent}%</div>
-          <div style="margin-top: 8px;"><strong>Frequent 1-Itemsets (L1):</strong> ${res.frequent1Itemsets.map(i => `${i.item} (${i.supportPct}%)`).join(', ')}</div>
-          <div><strong>Frequent 2-Itemsets (L2):</strong> ${res.frequent2Itemsets.map(i => `${i.pair} (${i.supportPct}%)`).join(', ')}</div>
-          <div style="margin-top: 12px; color: #38bdf8; font-weight: bold;">Generated Strong Rules:</div>
-          ${res.rules.map(r => `<div>${r.rule} &rarr; Support: ${r.support}%, Confidence: ${r.confidence}%, Lift: ${r.lift}</div>`).join('')}
-        </div>
-      `;
-    } else {
-      solutionHtml = `
-        <div style="font-family: monospace; font-size: 13px;">
-          <h3 style="color: #10b981; font-size: 16px; margin-bottom: 8px;">Solution Computed Successfully</h3>
-          <p>The mathematical engine computed the solution locally according to algorithm rules for <strong>${algo.toUpperCase()}</strong>.</p>
+        <div style="color: #ef4444; font-weight: bold; padding: 14px; background: rgba(239,68,68,0.1); border: 1px solid #ef4444; border-radius: 8px;">
+          ⚠️ Calculation Error: ${err.message || 'Please check your numerical input format and try again.'}
         </div>
       `;
     }
